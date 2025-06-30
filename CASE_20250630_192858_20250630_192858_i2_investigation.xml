@@ -1,0 +1,220 @@
+<?xml version="1.0" ?>
+<i2:Investigation xmlns:i2="http://www.i2group.com/Investigation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <CaseInfo>
+    <CaseTitle>Cryptocurrency Investigation - CASE_20250630_192858_20250630_192858</CaseTitle>
+    <DateCreated>2025-06-30T19:28:58.448959</DateCreated>
+    <CreatedBy>Crypto Address Extractor</CreatedBy>
+  </CaseInfo>
+  <Entities>
+    <Entity EntityId="addr_3FKWSyWgZgBNeEATqZbWZpZgYHjdRDt9aD_SOL" EntityType="CryptoAddress">
+      <Label>SOL:3FKWSyWgZgBNeEATqZbW...</Label>
+      <IconStyle>CryptoAddress</IconStyle>
+      <Attributes>
+        <Attribute Name="Address">3FKWSyWgZgBNeEATqZbWZpZgYHjdRDt9aD</Attribute>
+        <Attribute Name="CryptoType">SOL</Attribute>
+        <Attribute Name="CryptoCurrency">Solana</Attribute>
+        <Attribute Name="Confidence">95.0%</Attribute>
+        <Attribute Name="RiskLevel">Unknown</Attribute>
+        <Attribute Name="Balance">Unknown</Attribute>
+        <Attribute Name="ClusterName">Unknown</Attribute>
+        <Attribute Name="SourceFile">test.csv</Attribute>
+        <Attribute Name="SourceSheet">N/A</Attribute>
+        <Attribute Name="SourceLocation">Row 2, Col 3</Attribute>
+        <Attribute Name="ExtractedDate">2025-06-30</Attribute>
+        <Attribute Name="IsDuplicate">No</Attribute>
+        <Attribute Name="ClusterCategory">Unknown</Attribute>
+        <Attribute Name="HasExchangeExposure">No</Attribute>
+      </Attributes>
+    </Entity>
+    <Entity EntityId="addr_bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh_BTC" EntityType="CryptoAddress">
+      <Label>BTC:bc1qxy2kgdygjrsqtzq2... (Twitter Scam Hack: Account Takeover 2020-07-15 bc1qxy)</Label>
+      <IconStyle>Bitcoin</IconStyle>
+      <Attributes>
+        <Attribute Name="Address">bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</Attribute>
+        <Attribute Name="CryptoType">BTC</Attribute>
+        <Attribute Name="CryptoCurrency">Bitcoin</Attribute>
+        <Attribute Name="Confidence">100.0%</Attribute>
+        <Attribute Name="RiskLevel">Unknown</Attribute>
+        <Attribute Name="Balance">166,031.87360000</Attribute>
+        <Attribute Name="ClusterName">Twitter Scam Hack: Account Takeover 2020-07-15 bc1qxy</Attribute>
+        <Attribute Name="SourceFile">test.csv</Attribute>
+        <Attribute Name="SourceSheet">N/A</Attribute>
+        <Attribute Name="SourceLocation">Row 3, Col 3</Attribute>
+        <Attribute Name="ExtractedDate">2025-06-30</Attribute>
+        <Attribute Name="IsDuplicate">No</Attribute>
+        <Attribute Name="TotalReceived">213,405.69020000</Attribute>
+        <Attribute Name="TotalSent">118,318.39540000</Attribute>
+        <Attribute Name="TransactionCount">906</Attribute>
+        <Attribute Name="ClusterCategory">scam</Attribute>
+        <Attribute Name="HasExchangeExposure">No</Attribute>
+      </Attributes>
+    </Entity>
+    <Entity EntityId="addr_1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s_BTC" EntityType="CryptoAddress">
+      <Label>BTC:1NDyJtNTjmwk5xPNhjgA... (Binance.com)</Label>
+      <IconStyle>Bitcoin</IconStyle>
+      <Attributes>
+        <Attribute Name="Address">1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s</Attribute>
+        <Attribute Name="CryptoType">BTC</Attribute>
+        <Attribute Name="CryptoCurrency">Bitcoin</Attribute>
+        <Attribute Name="Confidence">100.0%</Attribute>
+        <Attribute Name="RiskLevel">Unknown</Attribute>
+        <Attribute Name="Balance">51,007,083,144.86019897</Attribute>
+        <Attribute Name="ClusterName">Binance.com</Attribute>
+        <Attribute Name="SourceFile">test.csv</Attribute>
+        <Attribute Name="SourceSheet">N/A</Attribute>
+        <Attribute Name="SourceLocation">Row 4, Col 3</Attribute>
+        <Attribute Name="ExtractedDate">2025-06-30</Attribute>
+        <Attribute Name="IsDuplicate">No</Attribute>
+        <Attribute Name="TotalReceived">904,680,592,593.29101562</Attribute>
+        <Attribute Name="TotalSent">894,180,649,534.56628418</Attribute>
+        <Attribute Name="TransactionCount">156156064</Attribute>
+        <Attribute Name="ClusterCategory">exchange</Attribute>
+        <Attribute Name="HasExchangeExposure">No</Attribute>
+      </Attributes>
+    </Entity>
+    <Entity EntityId="addr_3Cbq7aT1tY8kMxWLbitaG7yT6bPbKChq64_BTC" EntityType="CryptoAddress">
+      <Label>BTC:3Cbq7aT1tY8kMxWLbita... (HTX.com (formerly Huobi))</Label>
+      <IconStyle>Bitcoin</IconStyle>
+      <Attributes>
+        <Attribute Name="Address">3Cbq7aT1tY8kMxWLbitaG7yT6bPbKChq64</Attribute>
+        <Attribute Name="CryptoType">BTC</Attribute>
+        <Attribute Name="CryptoCurrency">Bitcoin</Attribute>
+        <Attribute Name="Confidence">100.0%</Attribute>
+        <Attribute Name="RiskLevel">Unknown</Attribute>
+        <Attribute Name="Balance">939,022,830.98538995</Attribute>
+        <Attribute Name="ClusterName">HTX.com (formerly Huobi)</Attribute>
+        <Attribute Name="SourceFile">test.csv</Attribute>
+        <Attribute Name="SourceSheet">N/A</Attribute>
+        <Attribute Name="SourceLocation">Row 5, Col 3</Attribute>
+        <Attribute Name="ExtractedDate">2025-06-30</Attribute>
+        <Attribute Name="IsDuplicate">No</Attribute>
+        <Attribute Name="TotalReceived">177,263,445,443.34393311</Attribute>
+        <Attribute Name="TotalSent">184,665,640,490.03656006</Attribute>
+        <Attribute Name="TransactionCount">30452432</Attribute>
+        <Attribute Name="ClusterCategory">exchange</Attribute>
+        <Attribute Name="HasExchangeExposure">No</Attribute>
+      </Attributes>
+    </Entity>
+    <Entity EntityId="addr_0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8_ETH" EntityType="CryptoAddress">
+      <Label>ETH:0xBE0eB53F46cd790Cd1... (Binance.com)</Label>
+      <IconStyle>Ethereum</IconStyle>
+      <Attributes>
+        <Attribute Name="Address">0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8</Attribute>
+        <Attribute Name="CryptoType">ETH</Attribute>
+        <Attribute Name="CryptoCurrency">Ethereum</Attribute>
+        <Attribute Name="Confidence">100.0%</Attribute>
+        <Attribute Name="RiskLevel">Unknown</Attribute>
+        <Attribute Name="Balance">11,593,925,340.60280037</Attribute>
+        <Attribute Name="ClusterName">Binance.com</Attribute>
+        <Attribute Name="SourceFile">test.csv</Attribute>
+        <Attribute Name="SourceSheet">N/A</Attribute>
+        <Attribute Name="SourceLocation">Row 6, Col 3</Attribute>
+        <Attribute Name="ExtractedDate">2025-06-30</Attribute>
+        <Attribute Name="IsDuplicate">No</Attribute>
+        <Attribute Name="TotalReceived">515,654,113,333.18701172</Attribute>
+        <Attribute Name="TotalSent">512,257,176,215.94360352</Attribute>
+        <Attribute Name="TransactionCount">156246663</Attribute>
+        <Attribute Name="ClusterCategory">exchange</Attribute>
+        <Attribute Name="HasExchangeExposure">No</Attribute>
+      </Attributes>
+    </Entity>
+    <Entity EntityId="addr_0xdAC17F958D2ee523a2206206994597C13D831ec7_ETH" EntityType="CryptoAddress">
+      <Label>ETH:0xdAC17F958D2ee523a2... (Tether USD (USDT) - 0xdAC17F [Ethereum])</Label>
+      <IconStyle>Ethereum</IconStyle>
+      <Attributes>
+        <Attribute Name="Address">0xdAC17F958D2ee523a2206206994597C13D831ec7</Attribute>
+        <Attribute Name="CryptoType">ETH</Attribute>
+        <Attribute Name="CryptoCurrency">Ethereum</Attribute>
+        <Attribute Name="Confidence">100.0%</Attribute>
+        <Attribute Name="RiskLevel">Unknown</Attribute>
+        <Attribute Name="Balance">Unknown</Attribute>
+        <Attribute Name="ClusterName">Tether USD (USDT) - 0xdAC17F [Ethereum]</Attribute>
+        <Attribute Name="SourceFile">test.csv</Attribute>
+        <Attribute Name="SourceSheet">N/A</Attribute>
+        <Attribute Name="SourceLocation">Row 7, Col 3</Attribute>
+        <Attribute Name="ExtractedDate">2025-06-30</Attribute>
+        <Attribute Name="IsDuplicate">No</Attribute>
+        <Attribute Name="TotalReceived">0.00000000</Attribute>
+        <Attribute Name="TotalSent">0.00000000</Attribute>
+        <Attribute Name="TransactionCount">342232789</Attribute>
+        <Attribute Name="ClusterCategory">token smart contract</Attribute>
+        <Attribute Name="HasExchangeExposure">No</Attribute>
+      </Attributes>
+    </Entity>
+    <Entity EntityId="addr_0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48_ETH" EntityType="CryptoAddress">
+      <Label>ETH:0xA0b86991c6218b36c1... (USDC Token Contract)</Label>
+      <IconStyle>Ethereum</IconStyle>
+      <Attributes>
+        <Attribute Name="Address">0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48</Attribute>
+        <Attribute Name="CryptoType">ETH</Attribute>
+        <Attribute Name="CryptoCurrency">Ethereum</Attribute>
+        <Attribute Name="Confidence">100.0%</Attribute>
+        <Attribute Name="RiskLevel">Unknown</Attribute>
+        <Attribute Name="Balance">Unknown</Attribute>
+        <Attribute Name="ClusterName">USDC Token Contract</Attribute>
+        <Attribute Name="SourceFile">test.csv</Attribute>
+        <Attribute Name="SourceSheet">N/A</Attribute>
+        <Attribute Name="SourceLocation">Row 8, Col 3</Attribute>
+        <Attribute Name="ExtractedDate">2025-06-30</Attribute>
+        <Attribute Name="IsDuplicate">No</Attribute>
+        <Attribute Name="TotalReceived">0.00000000</Attribute>
+        <Attribute Name="TotalSent">0.00000000</Attribute>
+        <Attribute Name="TransactionCount">165856895</Attribute>
+        <Attribute Name="ClusterCategory">token smart contract</Attribute>
+        <Attribute Name="HasExchangeExposure">No</Attribute>
+      </Attributes>
+    </Entity>
+    <Entity EntityId="addr_TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9_TRX" EntityType="CryptoAddress">
+      <Label>TRX:TN3W4H6rK2ce4vX9YnFQ... (Bitcoin TRC20 (BTCT) - TN3W4H6r [Tron])</Label>
+      <IconStyle>CryptoAddress</IconStyle>
+      <Attributes>
+        <Attribute Name="Address">TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9</Attribute>
+        <Attribute Name="CryptoType">TRX</Attribute>
+        <Attribute Name="CryptoCurrency">Tron</Attribute>
+        <Attribute Name="Confidence">100.0%</Attribute>
+        <Attribute Name="RiskLevel">Unknown</Attribute>
+        <Attribute Name="Balance">45,616.84196000</Attribute>
+        <Attribute Name="ClusterName">Bitcoin TRC20 (BTCT) - TN3W4H6r [Tron]</Attribute>
+        <Attribute Name="SourceFile">test.csv</Attribute>
+        <Attribute Name="SourceSheet">N/A</Attribute>
+        <Attribute Name="SourceLocation">Row 9, Col 3</Attribute>
+        <Attribute Name="ExtractedDate">2025-06-30</Attribute>
+        <Attribute Name="IsDuplicate">No</Attribute>
+        <Attribute Name="TotalReceived">8,926.89532000</Attribute>
+        <Attribute Name="TotalSent">0.00000000</Attribute>
+        <Attribute Name="TransactionCount">3606738</Attribute>
+        <Attribute Name="ClusterCategory">token smart contract</Attribute>
+        <Attribute Name="HasExchangeExposure">No</Attribute>
+      </Attributes>
+    </Entity>
+    <Entity EntityId="cluster_Binance_com" EntityType="Cluster">
+      <Label>Cluster: Binance.com</Label>
+      <IconStyle>Exchange_Cluster</IconStyle>
+      <Attributes>
+        <Attribute Name="ClusterName">Binance.com</Attribute>
+        <Attribute Name="Category">exchange</Attribute>
+        <Attribute Name="AddressCount">2</Attribute>
+        <Attribute Name="CryptoTypes">BTC, ETH</Attribute>
+        <Attribute Name="TotalBalance">62,601,008,485.46299744</Attribute>
+        <Attribute Name="RiskLevel">MEDIUM</Attribute>
+        <Attribute Name="HighRiskAddresses">0</Attribute>
+      </Attributes>
+    </Entity>
+  </Entities>
+  <Links>
+    <Link LinkId="cluster_link_cluster_Binance_com_1NDyJtNTjmwk5xPNhjgA_BTC" FromEntity="cluster_Binance_com" ToEntity="addr_1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s_BTC" LinkType="Controls">
+      <Label>Controls BTC Address</Label>
+      <Strength>0.9</Strength>
+      <Attributes>
+        <Attribute Name="RelationshipType">ClusterMembership</Attribute>
+      </Attributes>
+    </Link>
+    <Link LinkId="cluster_link_cluster_Binance_com_0xBE0eB53F46cd790Cd1_ETH" FromEntity="cluster_Binance_com" ToEntity="addr_0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8_ETH" LinkType="Controls">
+      <Label>Controls ETH Address</Label>
+      <Strength>0.9</Strength>
+      <Attributes>
+        <Attribute Name="RelationshipType">ClusterMembership</Attribute>
+      </Attributes>
+    </Link>
+  </Links>
+</i2:Investigation>

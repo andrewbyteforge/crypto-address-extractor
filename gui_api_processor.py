@@ -48,8 +48,8 @@ class APIProcessor:
         total_count = len(addresses)
         duplicate_savings = total_count - unique_count
         
-        self.logger.info(f"🚀 BULK DEDUPLICATION: {total_count} → {unique_count} addresses")
-        self.logger.info(f"💰 API CALL SAVINGS: {duplicate_savings} duplicate calls avoided")
+        self.logger.info(f"BULK DEDUPLICATION: {total_count} -> {unique_count} addresses")
+        self.logger.info(f"API CALL SAVINGS: {duplicate_savings} duplicate calls avoided")
         
         return dict(address_map)
 
@@ -129,8 +129,8 @@ class APIProcessor:
             'COSMOS': 'ATOM',
             'ADA':   'ADA',
             'CARDANO': 'ADA',
-            'SOL':   'SOL',        # ← FIXED: Added Solana support
-            'SOLANA': 'SOL',       # ← FIXED: Added Solana alias
+            'SOL':   'SOL',        # Added Solana support
+            'SOLANA': 'SOL',       # Added Solana alias
             'TRX':   'TRX',
             'TRON':  'TRX',
             'BCH':   'BCH',
@@ -309,12 +309,12 @@ class APIProcessor:
     def _process_single_address_with_logging(self, addr, api_symbol, index, api_stats):
         """
         Process a single address with detailed logging and statistics.
-        UPDATED: Enhanced to handle all Chainalysis API response formats including Solana.
+        FIXED: Uses cluster root address for exposure API calls.
         """
         api_data = {}
         call_stats = {}
         
-        self.logger.info(f"\n{'='*60}")
+        self.logger.info(f"{'='*60}")
         self.logger.info(f"Processing address {index + 1}: {addr.address}")
         self.logger.info(f"Crypto type: {api_symbol}")
         
@@ -326,7 +326,10 @@ class APIProcessor:
             # Track overall timing
             overall_start = time.time()
             
-            # Get balance information
+            # IMPORTANT: We need to get the cluster/root address first from balance API
+            cluster_root_address = addr.address  # Default to the address itself
+            
+            # Get balance information (this also gives us the root address)
             if self.gui.api_balance_var.get():
                 start_time = time.time()
                 try:
@@ -345,7 +348,7 @@ class APIProcessor:
                     self.logger.info(f"✓ Balance API: SUCCESS (200) - {response_time:.2f}s")
                     self.logger.debug(f"  Full balance response: {balance_data}")
                     
-                    # Enhanced balance data extraction
+                    # Extract balance data
                     api_data['balance'] = balance_data.get('balance', 0)
                     api_data['total_received'] = balance_data.get('totalReceivedAmount', 0)
                     api_data['total_sent'] = balance_data.get('totalSentAmount', 0)
@@ -354,39 +357,50 @@ class APIProcessor:
                     api_data['withdrawal_count'] = balance_data.get('withdrawalCount', 0)
                     api_data['address_count'] = balance_data.get('addressCount', 1)
                     api_data['total_fees'] = balance_data.get('totalFeesAmount', 0)
-                    api_data['root_address'] = balance_data.get('rootAddress', addr.address)
+                    
+                    # CRITICAL: Get the root address for the cluster
+                    cluster_root_address = balance_data.get('rootAddress', addr.address)
+                    api_data['root_address'] = cluster_root_address
+                    api_data['cluster_root_address'] = cluster_root_address  # Ensure both are set
+                    api_data['cluster_root_address'] = cluster_root_address  # Ensure this is stored
+                    
+                    if cluster_root_address != addr.address:
+                        self.logger.info(f"  📍 Cluster root address: {cluster_root_address}")
+                        self.logger.info(f"  📊 This cluster contains {api_data['address_count']} addresses")
                     
                 except Exception as e:
                     response_time = time.time() - start_time
                     error_str = str(e)
-                    
-                    # Extract status code from error
                     status_code = self._extract_status_code(error_str)
                     api_stats['status_codes'][status_code] += 1
                     api_stats['error_types'][f'balance_{status_code}'] += 1
                     
                     self.logger.warning(f"✗ Balance API: FAILED ({status_code}) - {response_time:.2f}s")
                     self.logger.warning(f"  Error: {error_str}")
-                    
-                    if status_code == 503:
-                        raise Exception("API service temporarily unavailable")
                     api_data['balance_error'] = error_str
+                    # Still use the original address if balance API failed
+                    cluster_root_address = addr.address
             
-            # Enhanced exposure information - check BOTH directions with better parsing
+            # Get exposure information using CLUSTER ROOT ADDRESS
             if self.gui.api_exposure_var.get():
-                exchange_exposure = {
-                    'direct': [],
-                    'indirect': []
-                }
-                exposure_direction = None
+                self.logger.info(f"\n  Getting exposure for cluster root: {cluster_root_address[:20]}...")
                 
-                # Check SENDING direction first
+                # Initialize exposure data structures
+                api_data['sending_direct_exposure'] = []
+                api_data['has_darknet_exposure'] = False  # Track darknet exposure
+                api_data['cluster_root_address'] = cluster_root_address  # Store cluster address
+                api_data['has_darknet_exposure'] = False  # Track if any darknet market exposure found
+                api_data['sending_indirect_exposure'] = []
+                api_data['receiving_direct_exposure'] = []
+                api_data['receiving_indirect_exposure'] = []
+                
+                # Get SENDING exposure using cluster root address
                 start_time = time.time()
                 try:
-                    self.logger.debug(f"Calling get_exposure_by_service (SENDING) for {addr.address[:20]}...")
+                    self.logger.debug(f"Calling get_exposure_by_service (SENDING) for cluster {cluster_root_address[:20]}...")
                     
-                    sent_exposure_data = self.gui.api_service.get_exposure_by_service(
-                        addr.address, 
+                    sending_exposure_data = self.gui.api_service.get_exposure_by_service(
+                        cluster_root_address,  # USE CLUSTER ROOT ADDRESS
                         api_symbol, 
                         'SENDING',
                         self.gui.api_currency_var.get()
@@ -397,38 +411,99 @@ class APIProcessor:
                     api_stats['status_codes'][200] += 1
                     
                     self.logger.info(f"✓ Exposure API (SENDING): SUCCESS (200) - {response_time:.2f}s")
-                    self.logger.debug(f"  Full SENDING exposure response: {sent_exposure_data}")
+                    self.logger.debug(f"  Full SENDING exposure response: {sending_exposure_data}")
                     
-                    # Extract both direct and indirect services
-                    services_data = self._extract_services_from_response(sent_exposure_data)
+                    # Extract services from response
+                    services_data = self._extract_services_from_response(sending_exposure_data)
+                    # Enhanced exposure logging for debugging
+                    self.logger.info(f"EXPOSURE ANALYSIS for {addr.address[:20]}...")
                     
-                    # Process direct exposure
+                    # Log all services found before filtering
+                    all_services_count = len(services_data.get('direct', [])) + len(services_data.get('indirect', []))
+                    self.logger.info(f"  Total services found: {all_services_count}")
+                    
+                    if all_services_count > 0:
+                        self.logger.info("  Sample services (first 5):")
+                        for i, service in enumerate(services_data.get('direct', [])[:5]):
+                            name = service.get('name', 'Unknown')
+                            category = service.get('category', 'Unknown')
+                            percentage = service.get('percentage', 0)
+                            self.logger.info(f"    {i+1}. {name} ({category}) - {percentage:.1f}%")
+                    
+                    # Log filtering results
+                    filtered_count = len(api_data.get('sending_direct_exposure', []))
+                    self.logger.info(f"  Services after exchange filtering: {filtered_count}")
+                    
+                    if filtered_count == 0 and all_services_count > 0:
+                        self.logger.warning(f"  WARNING: All {all_services_count} services were filtered out!")
+                        self.logger.warning("  This suggests the exchange detection logic may be too restrictive.")
+
+                    # Enhanced exposure logging for debugging
+                    self.logger.info(f"EXPOSURE ANALYSIS for {addr.address[:20]}...")
+                    
+                    # Log all services found before filtering
+                    all_services_count = len(services_data.get('direct', [])) + len(services_data.get('indirect', []))
+                    self.logger.info(f"  Total services found: {all_services_count}")
+                    
+                    if all_services_count > 0:
+                        self.logger.info("  Sample services (first 5):")
+                        for i, service in enumerate(services_data.get('direct', [])[:5]):
+                            name = service.get('name', 'Unknown')
+                            category = service.get('category', 'Unknown')
+                            percentage = service.get('percentage', 0)
+                            self.logger.info(f"    {i+1}. {name} ({category}) - {percentage:.1f}%")
+                    
+                    # Log filtering results
+                    filtered_count = len(api_data.get('sending_direct_exposure', []))
+                    self.logger.info(f"  Services after exchange filtering: {filtered_count}")
+                    
+                    if filtered_count == 0 and all_services_count > 0:
+                        self.logger.warning(f"  WARNING: All {all_services_count} services were filtered out!")
+                        self.logger.warning("  This suggests the exchange detection logic may be too restrictive.")
+
+                    
+                    # Process ONLY exchanges and darknet markets
+                    # Direct exposure for SENDING
                     for service in services_data.get('direct', []):
-                        if self._is_exchange_service(service):
-                            exchange_exposure['direct'].append({
-                                'name': service.get('name', 'Unknown'),
-                                'category': service.get('category', 'Unknown'),
-                                'value': service.get('value', service.get('amount', service.get('sentAmount', 0))),
-                                'percentage': service.get('percentage', 0),
-                                'direction': 'SENDING',
-                                'type': 'direct'
-                            })
+                        service_info = {
+                            'name': service.get('name', 'Unknown'),
+                            'category': service.get('category', 'Unknown'),
+                            'value': service.get('value', service.get('amount', service.get('sentAmount', 0))),
+                            'percentage': service.get('percentage', 0)
+                        }
+                        is_relevant, is_darknet, service_type = self._is_exchange_or_darknet_service(service)
+                        if is_relevant:
+                            api_data['sending_direct_exposure'].append(service_info)
+                            if service_type == 'darknet':
+                                api_data['has_darknet_exposure'] = True
+                                self.logger.info(f"    ⚠️  DARKNET MARKET DETECTED: {service_info['name']}")
+                            if is_darknet:
+                                api_data['has_darknet_exposure'] = True
                     
-                    # Process indirect exposure
+                    # Indirect exposure for SENDING
                     for service in services_data.get('indirect', []):
-                        if self._is_exchange_service(service):
-                            exchange_exposure['indirect'].append({
-                                'name': service.get('name', 'Unknown'),
-                                'category': service.get('category', 'Unknown'),
-                                'value': service.get('value', service.get('amount', service.get('sentAmount', 0))),
-                                'percentage': service.get('percentage', 0),
-                                'direction': 'SENDING',
-                                'type': 'indirect'
-                            })
+                        service_info = {
+                            'name': service.get('name', 'Unknown'),
+                            'category': service.get('category', 'Unknown'),
+                            'value': service.get('value', service.get('amount', service.get('sentAmount', 0))),
+                            'percentage': service.get('percentage', 0)
+                        }
+                        is_relevant, is_darknet, service_type = self._is_exchange_or_darknet_service(service)
+                        if is_relevant:
+                            api_data['sending_indirect_exposure'].append(service_info)
+                            if service_type == 'darknet':
+                                api_data['has_darknet_exposure'] = True
+                                self.logger.info(f"    ⚠️  DARKNET MARKET DETECTED: {service_info['name']}")
+                            if is_darknet:
+                                api_data['has_darknet_exposure'] = True
                     
-                    if exchange_exposure['direct'] or exchange_exposure['indirect']:
-                        exposure_direction = 'SENDING'
-                        self.logger.debug(f"  Found {len(exchange_exposure['direct'])} direct and {len(exchange_exposure['indirect'])} indirect exchange exposures (SENDING)")
+                    self.logger.info(f"  📊 SENDING: {len(api_data['sending_direct_exposure'])} direct, {len(api_data['sending_indirect_exposure'])} indirect exposures")
+                    
+                    # Log top exposures
+                    if api_data['sending_direct_exposure']:
+                        self.logger.info("  Top SENDING direct exposures:")
+                        for exp in sorted(api_data['sending_direct_exposure'], key=lambda x: x['percentage'], reverse=True)[:3]:
+                            self.logger.info(f"    - {exp['name']} ({exp['category']}): {exp['percentage']:.1f}%")
                     
                 except Exception as e:
                     response_time = time.time() - start_time
@@ -439,93 +514,79 @@ class APIProcessor:
                     self.logger.warning(f"✗ Exposure API (SENDING): FAILED ({status_code}) - {response_time:.2f}s")
                     self.logger.warning(f"  Error: {error_str}")
                 
-                # Check RECEIVING direction if no SENDING exposure found
-                if not (exchange_exposure['direct'] or exchange_exposure['indirect']):
-                    start_time = time.time()
-                    try:
-                        self.logger.debug(f"Calling get_exposure_by_service (RECEIVING) for {addr.address[:20]}...")
-                        
-                        received_exposure_data = self.gui.api_service.get_exposure_by_service(
-                            addr.address, 
-                            api_symbol, 
-                            'RECEIVING',
-                            self.gui.api_currency_var.get()
-                        )
-                        
-                        response_time = time.time() - start_time
-                        api_stats['response_times'].append(response_time)
-                        api_stats['status_codes'][200] += 1
-                        
-                        self.logger.info(f"✓ Exposure API (RECEIVING): SUCCESS (200) - {response_time:.2f}s")
-                        self.logger.debug(f"  Full RECEIVING exposure response: {received_exposure_data}")
-                        
-                        # Extract both direct and indirect services
-                        services_data = self._extract_services_from_response(received_exposure_data)
-                        
-                        # Process direct exposure for RECEIVING
-                        for service in services_data.get('direct', []):
-                            if self._is_exchange_service(service):
-                                exchange_exposure['direct'].append({
-                                    'name': service.get('name', 'Unknown'),
-                                    'category': service.get('category', 'Unknown'),
-                                    'value': service.get('value', service.get('amount', service.get('receivedAmount', 0))),
-                                    'percentage': service.get('percentage', 0),
-                                    'direction': 'RECEIVING',
-                                    'type': 'direct'
-                                })
-                        
-                        # Process indirect exposure for RECEIVING
-                        for service in services_data.get('indirect', []):
-                            if self._is_exchange_service(service):
-                                exchange_exposure['indirect'].append({
-                                    'name': service.get('name', 'Unknown'),
-                                    'category': service.get('category', 'Unknown'),
-                                    'value': service.get('value', service.get('amount', service.get('receivedAmount', 0))),
-                                    'percentage': service.get('percentage', 0),
-                                    'direction': 'RECEIVING',
-                                    'type': 'indirect'
-                                })
-                        
-                        if exchange_exposure['direct'] or exchange_exposure['indirect']:
-                            exposure_direction = 'RECEIVING'
-                            self.logger.debug(f"  Found {len(exchange_exposure['direct'])} direct and {len(exchange_exposure['indirect'])} indirect exchange exposures (RECEIVING)")
-                        
-                    except Exception as e:
-                        response_time = time.time() - start_time
-                        error_str = str(e)
-                        status_code = self._extract_status_code(error_str)
-                        api_stats['status_codes'][status_code] += 1
-                        api_stats['error_types'][f'exposure_received_{status_code}'] += 1
-                        self.logger.warning(f"✗ Exposure API (RECEIVING): FAILED ({status_code}) - {response_time:.2f}s")
-                        self.logger.warning(f"  Error: {error_str}")
-                
-                # Store enhanced results
-                api_data['exchange_exposure'] = exchange_exposure
-                api_data['has_direct_exposure'] = len(exchange_exposure.get('direct', [])) > 0
-                api_data['has_indirect_exposure'] = len(exchange_exposure.get('indirect', [])) > 0
-                if exposure_direction:
-                    api_data['exposure_direction'] = exposure_direction
-                
-                # Set the enhanced attributes on the address object
-                if exchange_exposure['direct'] or exchange_exposure['indirect']:
-                    # Set separated direct and indirect exposure
-                    setattr(addr, 'api_direct_exposure', exchange_exposure.get('direct', []))
-                    setattr(addr, 'api_indirect_exposure', exchange_exposure.get('indirect', []))
+                # Get RECEIVING exposure using cluster root address
+                start_time = time.time()
+                try:
+                    self.logger.debug(f"Calling get_exposure_by_service (RECEIVING) for cluster {cluster_root_address[:20]}...")
                     
-                    # Also set combined exposure for backward compatibility
-                    all_exposures = exchange_exposure.get('direct', []) + exchange_exposure.get('indirect', [])
-                    setattr(addr, 'api_exchange_exposure', all_exposures)
+                    receiving_exposure_data = self.gui.api_service.get_exposure_by_service(
+                        cluster_root_address,  # USE CLUSTER ROOT ADDRESS
+                        api_symbol, 
+                        'RECEIVING',
+                        self.gui.api_currency_var.get()
+                    )
                     
-                    # Log summary
-                    total_direct = len(exchange_exposure.get('direct', []))
-                    total_indirect = len(exchange_exposure.get('indirect', []))
-                    self.logger.info(f"  Found {total_direct} direct and {total_indirect} indirect exchange exposures")
-                else:
-                    # Set empty lists if no exposure data
-                    setattr(addr, 'api_direct_exposure', [])
-                    setattr(addr, 'api_indirect_exposure', [])
-                    setattr(addr, 'api_exchange_exposure', [])
-                    self.logger.debug("  No exchange exposure found in either direction")
+                    response_time = time.time() - start_time
+                    api_stats['response_times'].append(response_time)
+                    api_stats['status_codes'][200] += 1
+                    
+                    self.logger.info(f"✓ Exposure API (RECEIVING): SUCCESS (200) - {response_time:.2f}s")
+                    self.logger.debug(f"  Full RECEIVING exposure response: {receiving_exposure_data}")
+                    
+                    # Extract services from response
+                    services_data = self._extract_services_from_response(receiving_exposure_data)
+                    
+                    # Process ALL services (not just exchanges)
+                    # Direct exposure for RECEIVING
+                    for service in services_data.get('direct', []):
+                        service_info = {
+                            'name': service.get('name', 'Unknown'),
+                            'category': service.get('category', 'Unknown'),
+                            'value': service.get('value', service.get('amount', service.get('receivedAmount', 0))),
+                            'percentage': service.get('percentage', 0)
+                        }
+                        is_relevant, is_darknet, service_type = self._is_exchange_or_darknet_service(service)
+                        if is_relevant:
+                            api_data['receiving_direct_exposure'].append(service_info)
+                            if service_type == 'darknet':
+                                api_data['has_darknet_exposure'] = True
+                                self.logger.info(f"    ⚠️  DARKNET MARKET DETECTED: {service_info['name']}")
+                            if is_darknet:
+                                api_data['has_darknet_exposure'] = True
+                    
+                    # Indirect exposure for RECEIVING
+                    for service in services_data.get('indirect', []):
+                        service_info = {
+                            'name': service.get('name', 'Unknown'),
+                            'category': service.get('category', 'Unknown'),
+                            'value': service.get('value', service.get('amount', service.get('receivedAmount', 0))),
+                            'percentage': service.get('percentage', 0)
+                        }
+                        is_relevant, is_darknet, service_type = self._is_exchange_or_darknet_service(service)
+                        if is_relevant:
+                            api_data['receiving_indirect_exposure'].append(service_info)
+                            if service_type == 'darknet':
+                                api_data['has_darknet_exposure'] = True
+                                self.logger.info(f"    ⚠️  DARKNET MARKET DETECTED: {service_info['name']}")
+                            if is_darknet:
+                                api_data['has_darknet_exposure'] = True
+                    
+                    self.logger.info(f"  📊 RECEIVING: {len(api_data['receiving_direct_exposure'])} direct, {len(api_data['receiving_indirect_exposure'])} indirect exposures")
+                    
+                    # Log top exposures
+                    if api_data['receiving_direct_exposure']:
+                        self.logger.info("  Top RECEIVING direct exposures:")
+                        for exp in sorted(api_data['receiving_direct_exposure'], key=lambda x: x['percentage'], reverse=True)[:3]:
+                            self.logger.info(f"    - {exp['name']} ({exp['category']}): {exp['percentage']:.1f}%")
+                    
+                except Exception as e:
+                    response_time = time.time() - start_time
+                    error_str = str(e)
+                    status_code = self._extract_status_code(error_str)
+                    api_stats['status_codes'][status_code] += 1
+                    api_stats['error_types'][f'exposure_received_{status_code}'] += 1
+                    self.logger.warning(f"✗ Exposure API (RECEIVING): FAILED ({status_code}) - {response_time:.2f}s")
+                    self.logger.warning(f"  Error: {error_str}")
             
             # Get cluster information
             if self.gui.api_cluster_info_var.get():
@@ -551,13 +612,13 @@ class APIProcessor:
                     if cluster_info:
                         api_data['cluster_name'] = cluster_info.get('name', 'Unknown')
                         api_data['cluster_category'] = cluster_info.get('category', 'Unknown')
-                        api_data['cluster_root_address'] = cluster_info.get('rootAddress', addr.address)
+                        api_data['cluster_root_address'] = cluster_info.get('rootAddress', cluster_root_address)
                         self.logger.debug(f"  Cluster: {api_data['cluster_name']} ({api_data['cluster_category']})")
                     else:
                         self.logger.debug("  No cluster information found in response")
                         api_data['cluster_name'] = 'Unknown'
                         api_data['cluster_category'] = 'Unknown'
-                        api_data['cluster_root_address'] = addr.address
+                        api_data['cluster_root_address'] = cluster_root_address
                         
                 except Exception as e:
                     response_time = time.time() - start_time
@@ -574,6 +635,17 @@ class APIProcessor:
             total_time = time.time() - overall_start
             self.logger.info(f"Total processing time: {total_time:.2f}s")
             
+            # Set all API data as attributes on the address object
+            for key, value in api_data.items():
+                setattr(addr, f'api_{key}', value)
+            
+            # Specifically ensure cluster_root_address is set
+            setattr(addr, 'api_cluster_root_address', cluster_root_address)
+            
+            self.logger.info(f"Set {len(api_data)} API attributes on address")
+            self.logger.debug(f"Cluster root address set to: {cluster_root_address}")
+
+            
         except Exception as e:
             self.logger.error(f"API error for {addr.address}: {e}")
             call_stats['error'] = str(e)
@@ -581,6 +653,7 @@ class APIProcessor:
             raise
         
         return api_data, call_stats
+
     
     def _extract_services_from_response(self, response_data):
         """
@@ -634,51 +707,272 @@ class APIProcessor:
         
         return result
 
+    def _is_relevant_exposure_service(self, service):
+        """
+        Check if service is an exchange or darknet market.
+        Returns: (is_relevant, service_type) where service_type is 'exchange', 'darknet', or None
+        """
+        if not isinstance(service, dict):
+            return False, None
+        
+        category = str(service.get('category', '')).lower()
+        name = str(service.get('name', '')).lower()
+        
+        # Darknet market checks
+        darknet_categories = ['darknet market', 'darknet marketplace', 'dark market', 
+                            'darknet vendor', 'illicit market', 'dark web market']
+        darknet_names = ['hydra', 'alphabay', 'dream market', 'silk road', 'empire market',
+                        'white house market', 'dark0de', 'torrez', 'cannazon', 'versus',
+                        'berlusconi', 'apollon', 'nightmare', 'wall street market']
+        
+        for dark_cat in darknet_categories:
+            if dark_cat in category:
+                return True, 'darknet'
+        
+        for dark_name in darknet_names:
+            if dark_name in name:
+                return True, 'darknet'
+        
+        # Exchange checks
+        exchange_categories = ['exchange', 'centralized exchange', 'cex', 'dex', 
+                             'decentralized exchange', 'trading platform', 'crypto exchange']
+        
+        for exc_cat in exchange_categories:
+            if exc_cat in category:
+                return True, 'exchange'
+        
+        # Major exchange names
+        exchanges = [
+            'binance', 'coinbase', 'kraken', 'bitfinex', 'huobi', 'okx', 'okex',
+            'kucoin', 'gate.io', 'gate', 'bybit', 'bitstamp', 'gemini', 'bittrex',
+            'poloniex', 'crypto.com', 'mexc', 'lbank', 'hotbit', 'phemex', 'deribit',
+            'bitmex', 'uniswap', 'pancakeswap', 'sushiswap', 'curve', 'balancer',
+            'upbit', 'bithumb', 'coinone', 'bitflyer', 'liquid', 'bitbank'
+        ]
+        
+        for exchange in exchanges:
+            if exchange in name:
+                return True, 'exchange'
+        
+        return False, None
+
     def _is_exchange_service(self, service):
         """
         Determine if a service represents an exchange.
-        Enhanced to handle None values properly to prevent 'NoneType' has no attribute 'lower' errors.
-        
-        Args:
-            service: Service dictionary from API response
-            
-        Returns:
-            bool: True if service is an exchange, False otherwise
+        Simple version that captures most exchanges.
         """
         if not isinstance(service, dict):
             return False
         
-        # Get category and name safely
-        category = service.get('category', '')
-        name = service.get('name', '')
+        # Get fields safely
+        category = str(service.get('category', '')).lower()
+        name = str(service.get('name', '')).lower()
         
-        # Ensure we have strings before calling .lower()
-        if not isinstance(category, str):
-            category = str(category) if category is not None else ''
-        if not isinstance(name, str):
-            name = str(name) if name is not None else ''
+        # Category check
+        if any(term in category for term in ['exchange', 'cex', 'dex', 'trading']):
+            return True
         
-        category_lower = category.lower()
-        name_lower = name.lower()
-        
-        # Check if it's an exchange based on category
-        exchange_categories = ['exchange', 'centralized exchange', 'dex', 'decentralized exchange']
-        for exc_cat in exchange_categories:
-            if exc_cat in category_lower:
-                return True
-        
-        # Check known exchange names
-        known_exchanges = [
-            'binance', 'coinbase', 'kraken', 'bitfinex', 'huobi', 'okex', 'ftx',
-            'kucoin', 'gate.io', 'bybit', 'bitstamp', 'gemini', 'bittrex', 'poloniex',
-            'bitmart', 'crypto.com', 'mexc', 'lbank', 'hotbit', 'ascendex'
+        # Name check - major exchanges
+        exchanges = [
+            'binance', 'coinbase', 'kraken', 'bitfinex', 'huobi', 'okx', 'okex',
+            'kucoin', 'gate', 'bybit', 'bitstamp', 'gemini', 'bittrex', 'poloniex',
+            'crypto.com', 'mexc', 'hotbit', 'phemex', 'deribit', 'bitmex',
+            'uniswap', 'pancakeswap', 'sushiswap', 'curve', 'balancer'
         ]
         
-        for exchange in known_exchanges:
-            if exchange in name_lower:
-                return True
+        return any(ex in name for ex in exchanges)
+    
+    def _is_exchange_or_darknet_service(self, service):
+        """
+        Enhanced method to determine if a service represents an exchange or darknet market.
         
-        return False
+        This method uses comprehensive pattern matching to identify exchanges and
+        darknet markets with improved accuracy and logging for debugging.
+        
+        Args:
+            service (dict): Service dictionary from API response
+            
+        Returns:
+            tuple: (is_relevant, is_darknet, service_type) where:
+                   - is_relevant: True if exchange or darknet market
+                   - is_darknet: True if darknet market
+                   - service_type: 'exchange', 'darknet', or 'other'
+                   
+        Raises:
+            Exception: If service data is invalid
+        """
+        if not isinstance(service, dict):
+            self.logger.warning(f"Invalid service data type: {type(service)}")
+            return False, False, 'other'
+        
+        try:
+            # Get fields safely with detailed logging
+            category = str(service.get('category', '')).lower().strip()
+            name = str(service.get('name', '')).lower().strip()
+            
+            self.logger.debug(f"Analyzing service - Name: '{name}', Category: '{category}'")
+            
+            # Enhanced darknet market detection
+            darknet_categories = [
+                'darknet market', 'darknet marketplace', 'dark market', 'illicit market',
+                'darknet vendor', 'dark web market', 'black market', 'illegal marketplace'
+            ]
+            
+            darknet_names = [
+                'hydra', 'alphabay', 'dream market', 'silk road', 'empire market', 
+                'white house market', 'dark0de', 'torrez', 'cannazon', 'versus',
+                'berlusconi', 'apollon', 'nightmare', 'wall street market',
+                'darkmarket', 'darkbay', 'genesis'
+            ]
+            
+            # Check for darknet markets first
+            is_darknet = False
+            for dark_cat in darknet_categories:
+                if dark_cat in category:
+                    is_darknet = True
+                    self.logger.info(f"Darknet market detected by category: {name} ({category})")
+                    break
+            
+            if not is_darknet:
+                for dark_name in darknet_names:
+                    if dark_name in name:
+                        is_darknet = True
+                        self.logger.info(f"Darknet market detected by name: {name}")
+                        break
+            
+            # Enhanced exchange detection with comprehensive patterns
+            is_exchange = False
+            
+            # Primary exchange categories
+            exchange_categories = [
+                'exchange', 'centralized exchange', 'cex', 'dex', 'decentralized exchange',
+                'cryptocurrency exchange', 'crypto exchange', 'trading platform',
+                'digital asset exchange', 'spot exchange', 'derivatives exchange',
+                'trading service', 'exchange service', 'liquidity provider'
+            ]
+            
+            for exc_cat in exchange_categories:
+                if exc_cat in category:
+                    is_exchange = True
+                    self.logger.debug(f"Exchange detected by category: {name} ({category})")
+                    break
+            
+            # Comprehensive exchange name detection
+            if not is_exchange:
+                # Major centralized exchanges
+                major_exchanges = [
+                    'binance', 'coinbase', 'kraken', 'bitfinex', 'huobi', 'okx', 'okex',
+                    'kucoin', 'gate.io', 'gate', 'bybit', 'bitstamp', 'gemini', 'bittrex',
+                    'poloniex', 'crypto.com', 'mexc', 'lbank', 'hotbit', 'phemex', 
+                    'deribit', 'bitmex', 'ftx', 'bitget', 'ascendex', 'probit'
+                ]
+                
+                # Regional and smaller exchanges
+                regional_exchanges = [
+                    'upbit', 'bithumb', 'coinone', 'bitflyer', 'liquid', 'bitbank',
+                    'coincheck', 'zaif', 'bitpoint', 'coinex', 'bigone', 'zb.com',
+                    'hitbtc', 'yobit', 'exmo', 'livecoin', 'cex.io', 'bitso',
+                    'mercado bitcoin', 'foxbit', 'novadax', 'braziliex'
+                ]
+                
+                # DEX and DeFi protocols
+                dex_protocols = [
+                    'uniswap', 'pancakeswap', 'sushiswap', 'curve', 'balancer',
+                    '1inch', 'paraswap', 'kyber', 'bancor', 'airswap', 'loopring',
+                    'dydx', 'compound', 'aave', 'maker', 'synthetix'
+                ]
+                
+                all_exchanges = major_exchanges + regional_exchanges + dex_protocols
+                
+                for exchange in all_exchanges:
+                    if exchange in name:
+                        is_exchange = True
+                        self.logger.debug(f"Exchange detected by name match: {name} -> {exchange}")
+                        break
+                
+                # Additional pattern matching for exchange-like services
+                if not is_exchange:
+                    exchange_patterns = [
+                        'exchange', 'trading', 'swap', 'dex', 'cex', 'market',
+                        'trade', 'broker', 'otc', 'liquidity'
+                    ]
+                    
+                    for pattern in exchange_patterns:
+                        if pattern in name and len(name) > 3:  # Avoid false positives
+                            # Additional validation to avoid false matches
+                            non_exchange_patterns = ['wallet', 'mining', 'pool', 'bridge']
+                            is_non_exchange = any(ne_pattern in name for ne_pattern in non_exchange_patterns)
+                            
+                            if not is_non_exchange:
+                                is_exchange = True
+                                self.logger.debug(f"Exchange detected by pattern: {name} (pattern: {pattern})")
+                                break
+            
+            # Determine service type and relevance
+            if is_darknet:
+                service_type = 'darknet'
+                is_relevant = True
+            elif is_exchange:
+                service_type = 'exchange'
+                is_relevant = True
+            else:
+                service_type = 'other'
+                is_relevant = False
+            
+            if is_relevant:
+                self.logger.info(f"Service classified as {service_type}: {name} ({category})")
+            else:
+                self.logger.debug(f"Service not classified as exchange/darknet: {name} ({category})")
+            
+            return is_relevant, is_darknet, service_type
+            
+        except Exception as e:
+            self.logger.error(f"Error analyzing service {service}: {e}")
+            return False, False, 'other'
+
+    def _extract_all_exposure_services(self, sending_exposure_data, receiving_exposure_data, addr):
+        """
+        Extract and log ALL services from exposure data for debugging.
+        This helps identify why some exchanges might be missed.
+        """
+        all_services = {
+            'sending_direct': [],
+            'sending_indirect': [],
+            'receiving_direct': [],
+            'receiving_indirect': []
+        }
+        
+        # Extract from sending
+        if sending_exposure_data:
+            services = self._extract_services_from_response(sending_exposure_data)
+            all_services['sending_direct'] = services.get('direct', [])
+            all_services['sending_indirect'] = services.get('indirect', [])
+        
+        # Extract from receiving  
+        if receiving_exposure_data:
+            services = self._extract_services_from_response(receiving_exposure_data)
+            all_services['receiving_direct'] = services.get('direct', [])
+            all_services['receiving_indirect'] = services.get('indirect', [])
+        
+        # Log all services found (not just exchanges)
+        self.logger.info(f"\nALL SERVICES found for {addr.address[:20]}...:")
+            
+        for direction_type, services_list in all_services.items():
+            if services_list:
+                self.logger.info(f"\n{direction_type.upper()} ({len(services_list)} services):")
+                for service in services_list[:10]:  # Show first 10
+                    name = service.get('name', 'Unknown')
+                    category = service.get('category', 'Unknown')
+                    percentage = service.get('percentage', 0)
+                    value = service.get('value', 0)
+                    is_exchange = self._is_exchange_service(service)
+                    
+                    self.logger.info(f"    - {name} ({category}) - {percentage:.1f}% or ${value:,.0f} - Exchange: {is_exchange}")
+                
+                if len(services_list) > 10:
+                    self.logger.info(f"    ... and {len(services_list) - 10} more services")
+        
+        return all_services
     
     def _extract_cluster_info_from_response(self, response_data):
         """

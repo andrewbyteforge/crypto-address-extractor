@@ -423,6 +423,7 @@ class FileHandler:
                 "Sending Direct Exposure",
                 "Sending Indirect Exposure",
                 "Darknet Market",
+                "Darknet Market",
                                "Risk Level", "Entity", "Cluster Category"])
             
             # Write headers with formatting
@@ -592,7 +593,7 @@ class FileHandler:
             self.logger.info(f"Creating '{crypto_name}' sheet")
 
             # Headers
-            headers = ["Address", "Cluster Address", "Source File", "Row", "Column", "Confidence"]
+            headers = ["Address", "Cluster Address", "Cluster Address", "Source File", "Row", "Column", "Confidence"]
             if include_api_data:
                 headers.extend([
                     "Entity Name", "Direct Exposure", "Indirect Exposure",
@@ -610,15 +611,14 @@ class FileHandler:
 
             # Write data
             for row, addr in enumerate(unique_addresses, 2):
+                # Basic columns (1-6)
                 ws.cell(row=row, column=1, value=addr.address)
                 
                 # Cluster address in column 2
-                cluster_addr = getattr(addr, 'api_cluster_root_address', '')
-                if not cluster_addr:
-                    cluster_addr = getattr(addr, 'api_root_address', '')
-                ws.cell(row=row, column=2, value=cluster_addr)
-                
-                # Source file in column 3 (not column 4!)
+                cluster_address = getattr(addr, 'api_cluster_root_address', '')
+                if not cluster_address:
+                    cluster_address = getattr(addr, 'api_root_address', '')
+                ws.cell(row=row, column=2, value=cluster_address)
                 ws.cell(row=row, column=3, value=addr.filename)
                 ws.cell(row=row, column=4, value=addr.row)
                 ws.cell(row=row, column=5, value=addr.column)

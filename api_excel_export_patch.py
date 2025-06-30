@@ -399,7 +399,7 @@ def main():
     print("  2. file_handler.py - Fix API data column writing")
     
     # Apply patches
-    success = True
+    success = True  
     
     if not patch_gui_extraction_handler():
         success = False

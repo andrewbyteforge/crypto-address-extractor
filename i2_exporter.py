@@ -133,6 +133,90 @@ class i2Exporter:
         
         return xml_path
     
+    
+    def _is_service_an_exchange(self, name, category):
+        """
+        Helper method to determine if a service is an exchange.
+        
+        Args:
+            name (str): Service name
+            category (str): Service category
+            
+        Returns:
+            bool: True if the service is an exchange
+        """
+        if not name or not isinstance(name, str):
+            return False
+        
+        name_lower = name.lower()
+        category_lower = category.lower() if category else ''
+        
+        # Exchange categories
+        exchange_categories = [
+            'exchange', 'centralized exchange', 'cex', 'dex', 'decentralized exchange',
+            'cryptocurrency exchange', 'crypto exchange', 'trading platform'
+        ]
+        
+        for exc_cat in exchange_categories:
+            if exc_cat in category_lower:
+                return True
+        
+        # Known exchange names
+        exchanges = [
+            'binance', 'coinbase', 'kraken', 'bitfinex', 'huobi', 'okx', 'okex',
+            'kucoin', 'gate.io', 'gate', 'bybit', 'bitstamp', 'gemini', 'bittrex',
+            'poloniex', 'crypto.com', 'mexc', 'uniswap', 'pancakeswap', 'sushiswap'
+        ]
+        
+        for exchange in exchanges:
+            if exchange in name_lower:
+                return True
+        
+        return False
+
+
+    
+    def _is_service_an_exchange(self, name, category):
+        """
+        Helper method to determine if a service is an exchange.
+        
+        Args:
+            name (str): Service name
+            category (str): Service category
+            
+        Returns:
+            bool: True if the service is an exchange
+        """
+        if not name or not isinstance(name, str):
+            return False
+        
+        name_lower = name.lower()
+        category_lower = category.lower() if category else ''
+        
+        # Exchange categories
+        exchange_categories = [
+            'exchange', 'centralized exchange', 'cex', 'dex', 'decentralized exchange',
+            'cryptocurrency exchange', 'crypto exchange', 'trading platform'
+        ]
+        
+        for exc_cat in exchange_categories:
+            if exc_cat in category_lower:
+                return True
+        
+        # Known exchange names
+        exchanges = [
+            'binance', 'coinbase', 'kraken', 'bitfinex', 'huobi', 'okx', 'okex',
+            'kucoin', 'gate.io', 'gate', 'bybit', 'bitstamp', 'gemini', 'bittrex',
+            'poloniex', 'crypto.com', 'mexc', 'uniswap', 'pancakeswap', 'sushiswap'
+        ]
+        
+        for exchange in exchanges:
+            if exchange in name_lower:
+                return True
+        
+        return False
+
+
     def _create_address_entities(self, addresses: List['ExtractedAddress']) -> List[i2Entity]:
         """
         Create i2 entities for cryptocurrency addresses with proper None handling.
@@ -181,18 +265,58 @@ class i2Exporter:
                 if hasattr(addr, 'api_cluster_category') and addr.api_cluster_category:
                     attributes['ClusterCategory'] = addr.api_cluster_category
                 
-                # Add exchange exposure information
-                if hasattr(addr, 'api_exchange_exposure') and addr.api_exchange_exposure:
-                    exposure_list = []
-                    for exp in addr.api_exchange_exposure[:3]:  # Top 3 exposures
-                        if exp and 'name' in exp and 'value' in exp:
-                            exposure_list.append(f"{exp['name']}: {exp['value']:.2f}")
-                    
-                    if exposure_list:
-                        attributes['ExchangeExposure'] = "; ".join(exposure_list)
-                        attributes['HasExchangeExposure'] = 'Yes'
-                    else:
-                        attributes['HasExchangeExposure'] = 'No'
+                # Enhanced exchange exposure detection
+                has_exchange_exposure = False
+                exposure_list = []
+                
+                # Check all possible exposure sources
+                exposure_sources = [
+                    ('api_exchange_exposure', 'legacy'),
+                    ('api_direct_exposure', 'direct'),
+                    ('api_indirect_exposure', 'indirect'),
+                    ('api_sending_direct_exposure', 'sending_direct'),
+                    ('api_sending_indirect_exposure', 'sending_indirect'),
+                    ('api_receiving_direct_exposure', 'receiving_direct'),
+                    ('api_receiving_indirect_exposure', 'receiving_indirect')
+                ]
+                
+                for attr_name, source_type in exposure_sources:
+                    if hasattr(addr, attr_name):
+                        exposures = getattr(addr, attr_name)
+                        if exposures:
+                            for exp in exposures[:3]:  # Top 3 exposures per source
+                                if exp and isinstance(exp, dict):
+                                    name = exp.get('name', 'Unknown')
+                                    value = exp.get('value', 0)
+                                    percentage = exp.get('percentage', 0)
+                                    category = exp.get('category', 'Unknown')
+                                    
+                                    # Enhanced exchange detection
+                                    is_exchange = self._is_service_an_exchange(name, category)
+                                    
+                                    if is_exchange and (value > 0 or percentage > 0):
+                                        has_exchange_exposure = True
+                                        
+                                        # Format the exposure entry
+                                        if percentage > 0:
+                                            exposure_entry = f"{name}: {percentage:.1f}%"
+                                        elif value > 0:
+                                            exposure_entry = f"{name}: ${value:,.2f}"
+                                        else:
+                                            exposure_entry = name
+                                        
+                                        # Add source type for debugging
+                                        if source_type != 'legacy':
+                                            exposure_entry += f" ({source_type})"
+                                        
+                                        exposure_list.append(exposure_entry)
+                
+                # Set the HasExchangeExposure attribute
+                if has_exchange_exposure and exposure_list:
+                    attributes['ExchangeExposure'] = "; ".join(exposure_list[:5])  # Top 5 total
+                    attributes['HasExchangeExposure'] = 'Yes'
+                else:
+                    attributes['HasExchangeExposure'] = 'No'
                 else:
                     attributes['HasExchangeExposure'] = 'No'
                 
