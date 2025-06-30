@@ -21,6 +21,153 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 
 from extractor import ExtractedAddress
+from datetime import datetime
+
+
+class APICallTracker:
+    """
+    Comprehensive API call tracking for detailed statistics.
+    
+    This class tracks all API calls made during processing including:
+    - Total API calls made
+    - Successful vs failed calls  
+    - API calls by endpoint type (cluster, balance, exposure)
+    - Time spent on API calls
+    - Error details and status codes
+    """
+    
+    def __init__(self):
+        """Initialize API call tracking with all required metrics."""
+        self.logger = logging.getLogger(__name__)
+        self.reset_statistics()
+    
+    def reset_statistics(self):
+        """Reset all tracking statistics."""
+        self.total_api_calls = 0
+        self.successful_calls = 0
+        self.failed_calls = 0
+        self.start_time = None
+        self.end_time = None
+        
+        # Calls by endpoint type
+        self.calls_by_endpoint = {
+            'cluster': 0,
+            'balance': 0,
+            'sending_exposure': 0,
+            'receiving_exposure': 0
+        }
+        
+        # Success/failure by endpoint
+        self.success_by_endpoint = {
+            'cluster': 0,
+            'balance': 0,
+            'sending_exposure': 0,
+            'receiving_exposure': 0
+        }
+        
+        self.failure_by_endpoint = {
+            'cluster': 0,
+            'balance': 0,
+            'sending_exposure': 0,
+            'receiving_exposure': 0
+        }
+        
+        # Response times by endpoint
+        self.response_times = {
+            'cluster': [],
+            'balance': [],
+            'sending_exposure': [],
+            'receiving_exposure': []
+        }
+        
+        # Error tracking
+        self.error_details = []
+        self.status_codes = {}
+        
+        self.logger.debug("API call tracking statistics reset")
+    
+    def start_tracking(self):
+        """Start timing for API processing."""
+        self.start_time = datetime.now()
+        self.logger.info("API call tracking started")
+    
+    def end_tracking(self):
+        """End timing for API processing."""
+        self.end_time = datetime.now()
+        if self.start_time:
+            total_time = (self.end_time - self.start_time).total_seconds()
+            self.logger.info(f"API call tracking ended. Total time: {total_time:.2f} seconds")
+    
+    def record_api_call(self, endpoint_type, success, response_time, status_code=None, error_message=None):
+        """
+        Record an API call with all relevant metrics.
+        
+        Args:
+            endpoint_type (str): Type of API endpoint
+            success (bool): Whether the call was successful
+            response_time (float): Time taken for the call in seconds
+            status_code (int, optional): HTTP status code
+            error_message (str, optional): Error message if failed
+        """
+        if endpoint_type not in self.calls_by_endpoint:
+            self.logger.warning(f"Unknown endpoint type: {endpoint_type}")
+            return
+        
+        self.total_api_calls += 1
+        self.calls_by_endpoint[endpoint_type] += 1
+        self.response_times[endpoint_type].append(response_time)
+        
+        if success:
+            self.successful_calls += 1
+            self.success_by_endpoint[endpoint_type] += 1
+        else:
+            self.failed_calls += 1
+            self.failure_by_endpoint[endpoint_type] += 1
+            
+            if error_message:
+                self.error_details.append({
+                    'endpoint': endpoint_type,
+                    'error': error_message,
+                    'status_code': status_code,
+                    'timestamp': datetime.now(),
+                    'response_time': response_time
+                })
+        
+        if status_code:
+            self.status_codes[status_code] = self.status_codes.get(status_code, 0) + 1
+    
+    def get_statistics_summary(self):
+        """Get comprehensive statistics summary for Excel export."""
+        total_time = 0
+        if self.start_time and self.end_time:
+            total_time = (self.end_time - self.start_time).total_seconds()
+        
+        # Calculate average response times by endpoint
+        avg_response_times = {}
+        for endpoint, times in self.response_times.items():
+            if times:
+                avg_response_times[endpoint] = sum(times) / len(times)
+            else:
+                avg_response_times[endpoint] = 0.0
+        
+        success_rate = 0.0
+        if self.total_api_calls > 0:
+            success_rate = (self.successful_calls / self.total_api_calls) * 100
+        
+        return {
+            'total_calls': self.total_api_calls,
+            'successful_calls': self.successful_calls,
+            'failed_calls': self.failed_calls,
+            'success_rate': success_rate,
+            'total_time_seconds': total_time,
+            'calls_by_endpoint': self.calls_by_endpoint.copy(),
+            'success_by_endpoint': self.success_by_endpoint.copy(),
+            'failure_by_endpoint': self.failure_by_endpoint.copy(),
+            'avg_response_times': avg_response_times,
+            'status_codes': self.status_codes.copy(),
+            'error_count': len(self.error_details)
+        }
+
 
 
 class APIProcessor:
@@ -29,6 +176,7 @@ class APIProcessor:
     def __init__(self, parent_gui):
         self.gui = parent_gui
         self.logger = logging.getLogger(__name__)
+        self.api_tracker = APICallTracker()
     
     def _bulk_deduplicate_addresses(self, addresses: List[ExtractedAddress]) -> Dict[str, List[int]]:
         """
@@ -58,6 +206,11 @@ class APIProcessor:
         Enhanced version with progress tracking and proper threading.
         Now avoids duplicate API calls for the same address and includes Solana support.
         """
+        
+        # Initialize API call tracking
+        self.api_tracker.reset_statistics()
+        self.api_tracker.start_tracking()
+        self.logger.info("Starting comprehensive API call tracking")
         if not self.gui.api_service:
             return addresses
         
@@ -302,8 +455,11 @@ class APIProcessor:
                     setattr(addr, f'api_{field}', value)
                 enhanced_count += 1
         
+        # End API call tracking and log summary
+        self.api_tracker.end_tracking()
+        
         self.logger.info(f"API analysis complete. Applied data to {enhanced_count} addresses " +
-                        f"(from {len(api_results)} unique API calls)")
+                         f"(from {len(api_results)} unique API calls)")
         return addresses
     
     def _process_single_address_with_logging(self, addr, api_symbol, index, api_stats):
@@ -345,6 +501,9 @@ class APIProcessor:
                     api_stats['response_times'].append(response_time)
                     api_stats['status_codes'][200] += 1
                     
+                    # Track API call
+                    self.api_tracker.record_api_call('balance', True, response_time, 200)
+                    
                     self.logger.info(f"✓ Balance API: SUCCESS (200) - {response_time:.2f}s")
                     self.logger.debug(f"  Full balance response: {balance_data}")
                     
@@ -374,6 +533,9 @@ class APIProcessor:
                     status_code = self._extract_status_code(error_str)
                     api_stats['status_codes'][status_code] += 1
                     api_stats['error_types'][f'balance_{status_code}'] += 1
+                    
+                    # Track failed API call
+                    self.api_tracker.record_api_call('balance', False, response_time, status_code, error_str)
                     
                     self.logger.warning(f"✗ Balance API: FAILED ({status_code}) - {response_time:.2f}s")
                     self.logger.warning(f"  Error: {error_str}")
@@ -409,6 +571,9 @@ class APIProcessor:
                     response_time = time.time() - start_time
                     api_stats['response_times'].append(response_time)
                     api_stats['status_codes'][200] += 1
+                    
+                    # Track API call
+                    self.api_tracker.record_api_call('balance', True, response_time, 200)
                     
                     self.logger.info(f"✓ Exposure API (SENDING): SUCCESS (200) - {response_time:.2f}s")
                     self.logger.debug(f"  Full SENDING exposure response: {sending_exposure_data}")
@@ -530,6 +695,9 @@ class APIProcessor:
                     api_stats['response_times'].append(response_time)
                     api_stats['status_codes'][200] += 1
                     
+                    # Track API call
+                    self.api_tracker.record_api_call('balance', True, response_time, 200)
+                    
                     self.logger.info(f"✓ Exposure API (RECEIVING): SUCCESS (200) - {response_time:.2f}s")
                     self.logger.debug(f"  Full RECEIVING exposure response: {receiving_exposure_data}")
                     
@@ -602,6 +770,9 @@ class APIProcessor:
                     response_time = time.time() - start_time
                     api_stats['response_times'].append(response_time)
                     api_stats['status_codes'][200] += 1
+                    
+                    # Track API call
+                    self.api_tracker.record_api_call('balance', True, response_time, 200)
                     
                     self.logger.info(f"✓ Cluster API: SUCCESS (200) - {response_time:.2f}s")
                     self.logger.debug(f"  Full cluster response: {cluster_data}")
@@ -920,7 +1091,7 @@ class APIProcessor:
                 is_relevant = False
             
             if is_relevant:
-                self.logger.info(f"Service classified as {service_type}: {name} ({category})")
+                self.logger.debug(f"Service classified: {name}")
             else:
                 self.logger.debug(f"Service not classified as exchange/darknet: {name} ({category})")
             
@@ -1147,3 +1318,4 @@ class APIProcessor:
             'errors_text': errors_text,
             'cancel_btn': cancel_btn
         }
+    

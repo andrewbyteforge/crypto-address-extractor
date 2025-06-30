@@ -220,7 +220,7 @@ class FileHandler:
                 wb.remove(wb['Sheet'])
             
             # Create sheets
-            self._create_summary_sheet(wb, addresses)
+            self._create_summary_sheet(wb, addresses, getattr(self, "_api_stats", None))
             self._create_all_addresses_sheet(wb, addresses, include_api_data)
             # self._create_duplicate_analysis_sheet(wb, addresses)  # Temporarily disabled
             
@@ -322,16 +322,15 @@ class FileHandler:
         return "; ".join(formatted_parts)
 
     
-    def _create_summary_sheet(self, wb: Workbook, addresses: List[ExtractedAddress]) -> None:
+    def _create_summary_sheet(self, wb: Workbook, addresses: List[ExtractedAddress], 
+                           api_stats=None) -> None:
         """
-        Create summary sheet with extraction statistics.
+        Create summary sheet with extraction statistics and API usage.
         
         Args:
             wb (Workbook): The workbook to add the sheet to
             addresses (List[ExtractedAddress]): List of all addresses
-            
-        Raises:
-            Exception: If sheet creation fails
+            api_stats (dict, optional): API usage statistics from tracking
         """
         try:
             ws = wb.create_sheet("Summary")
@@ -375,16 +374,70 @@ class FileHandler:
                 ws.cell(row=row, column=3, value=count)
                 row += 1
             
+            # API Usage Statistics Section
+            if api_stats and api_stats.get('total_calls', 0) > 0:
+                api_start_row = row + 2
+                
+                # API Usage Section Header
+                ws.cell(row=api_start_row, column=1, value="API Usage Statistics:").font = Font(bold=True, size=12)
+                api_start_row += 1
+                
+                # Overall API Statistics
+                ws.cell(row=api_start_row, column=1, value="Total API Calls:")
+                ws.cell(row=api_start_row, column=2, value=api_stats.get('total_calls', 0))
+                api_start_row += 1
+                
+                ws.cell(row=api_start_row, column=1, value="Successful Calls:")
+                ws.cell(row=api_start_row, column=2, value=api_stats.get('successful_calls', 0))
+                api_start_row += 1
+                
+                ws.cell(row=api_start_row, column=1, value="Failed Calls:")
+                ws.cell(row=api_start_row, column=2, value=api_stats.get('failed_calls', 0))
+                api_start_row += 1
+                
+                ws.cell(row=api_start_row, column=1, value="Success Rate:")
+                success_rate = api_stats.get('success_rate', 0)
+                ws.cell(row=api_start_row, column=2, value=f"{success_rate:.1f}%")
+                api_start_row += 1
+                
+                ws.cell(row=api_start_row, column=1, value="Total Processing Time:")
+                total_time = api_stats.get('total_time_seconds', 0)
+                if total_time > 60:
+                    time_str = f"{total_time/60:.1f} minutes"
+                else:
+                    time_str = f"{total_time:.1f} seconds"
+                ws.cell(row=api_start_row, column=2, value=time_str)
+                api_start_row += 2
+                
+                # API Calls by Endpoint Type
+                calls_by_endpoint = api_stats.get('calls_by_endpoint', {})
+                if any(calls_by_endpoint.values()):
+                    ws.cell(row=api_start_row, column=1, value="API Calls by Endpoint:").font = Font(bold=True)
+                    api_start_row += 1
+                    
+                    for endpoint, count in calls_by_endpoint.items():
+                        if count > 0:
+                            success_count = api_stats.get('success_by_endpoint', {}).get(endpoint, 0)
+                            failure_count = api_stats.get('failure_by_endpoint', {}).get(endpoint, 0)
+                            avg_time = api_stats.get('avg_response_times', {}).get(endpoint, 0)
+                            
+                            ws.cell(row=api_start_row, column=1, value=f"  {endpoint.title()}:")
+                            ws.cell(row=api_start_row, column=2, value=f"{count} calls")
+                            ws.cell(row=api_start_row, column=3, value=f"({success_count} success, {failure_count} failed)")
+                            ws.cell(row=api_start_row, column=4, value=f"Avg: {avg_time:.2f}s")
+                            api_start_row += 1
+            
             # Format columns
             ws.column_dimensions['A'].width = 25
             ws.column_dimensions['B'].width = 20
+            ws.column_dimensions['C'].width = 25
+            ws.column_dimensions['D'].width = 15
             
-            self.logger.debug("Created summary sheet")
+            self.logger.debug("Created summary sheet with API usage statistics")
             
         except Exception as e:
             self.logger.error(f"Error creating summary sheet: {str(e)}", exc_info=True)
             raise
-    
     def _create_all_addresses_sheet(self, wb: Workbook, addresses: List[ExtractedAddress],
                                    include_api_data: bool) -> None:
         """

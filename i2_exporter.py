@@ -317,8 +317,6 @@ class i2Exporter:
                     attributes['HasExchangeExposure'] = 'Yes'
                 else:
                     attributes['HasExchangeExposure'] = 'No'
-                else:
-                    attributes['HasExchangeExposure'] = 'No'
                 
                 # Create display label
                 display_addr = addr.address[:20] + "..." if len(addr.address) > 25 else addr.address

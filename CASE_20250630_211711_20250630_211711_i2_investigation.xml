@@ -1,8 +1,8 @@
 <?xml version="1.0" ?>
 <i2:Investigation xmlns:i2="http://www.i2group.com/Investigation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <CaseInfo>
-    <CaseTitle>Cryptocurrency Investigation - CASE_20250630_192858_20250630_192858</CaseTitle>
-    <DateCreated>2025-06-30T19:28:58.448959</DateCreated>
+    <CaseTitle>Cryptocurrency Investigation - CASE_20250630_211711_20250630_211711</CaseTitle>
+    <DateCreated>2025-06-30T21:17:11.654208</DateCreated>
     <CreatedBy>Crypto Address Extractor</CreatedBy>
   </CaseInfo>
   <Entities>
@@ -35,7 +35,7 @@
         <Attribute Name="CryptoCurrency">Bitcoin</Attribute>
         <Attribute Name="Confidence">100.0%</Attribute>
         <Attribute Name="RiskLevel">Unknown</Attribute>
-        <Attribute Name="Balance">166,031.87360000</Attribute>
+        <Attribute Name="Balance">166,423.86880000</Attribute>
         <Attribute Name="ClusterName">Twitter Scam Hack: Account Takeover 2020-07-15 bc1qxy</Attribute>
         <Attribute Name="SourceFile">test.csv</Attribute>
         <Attribute Name="SourceSheet">N/A</Attribute>
@@ -46,7 +46,8 @@
         <Attribute Name="TotalSent">118,318.39540000</Attribute>
         <Attribute Name="TransactionCount">906</Attribute>
         <Attribute Name="ClusterCategory">scam</Attribute>
-        <Attribute Name="HasExchangeExposure">No</Attribute>
+        <Attribute Name="ExchangeExposure">Kraken.com: 0.0% (sending_direct); Binance.com: 0.0% (sending_indirect); LocalBitcoins.com: 0.0% (sending_indirect); Kraken.com: 0.0% (sending_indirect); Binance.com: 1.1% (receiving_direct)</Attribute>
+        <Attribute Name="HasExchangeExposure">Yes</Attribute>
       </Attributes>
     </Entity>
     <Entity EntityId="addr_1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s_BTC" EntityType="CryptoAddress">
@@ -58,18 +59,19 @@
         <Attribute Name="CryptoCurrency">Bitcoin</Attribute>
         <Attribute Name="Confidence">100.0%</Attribute>
         <Attribute Name="RiskLevel">Unknown</Attribute>
-        <Attribute Name="Balance">51,007,083,144.86019897</Attribute>
+        <Attribute Name="Balance">51,107,993,191.78427887</Attribute>
         <Attribute Name="ClusterName">Binance.com</Attribute>
         <Attribute Name="SourceFile">test.csv</Attribute>
         <Attribute Name="SourceSheet">N/A</Attribute>
         <Attribute Name="SourceLocation">Row 4, Col 3</Attribute>
         <Attribute Name="ExtractedDate">2025-06-30</Attribute>
         <Attribute Name="IsDuplicate">No</Attribute>
-        <Attribute Name="TotalReceived">904,680,592,593.29101562</Attribute>
-        <Attribute Name="TotalSent">894,180,649,534.56628418</Attribute>
-        <Attribute Name="TransactionCount">156156064</Attribute>
+        <Attribute Name="TotalReceived">904,697,288,248.75659180</Attribute>
+        <Attribute Name="TotalSent">894,216,748,229.43566895</Attribute>
+        <Attribute Name="TransactionCount">156159498</Attribute>
         <Attribute Name="ClusterCategory">exchange</Attribute>
-        <Attribute Name="HasExchangeExposure">No</Attribute>
+        <Attribute Name="ExchangeExposure">BitGrail.com: $2,052,724.25 (sending_direct); Ferma.cc: $1,113,345.45 (sending_indirect); Bybit.com Exploit 2025-02-21 bc1qdydvx4: $4.82 (sending_indirect); Namebase.io: $509,181.67 (receiving_direct); Bitt.com: $287,003.08 (receiving_direct)</Attribute>
+        <Attribute Name="HasExchangeExposure">Yes</Attribute>
       </Attributes>
     </Entity>
     <Entity EntityId="addr_3Cbq7aT1tY8kMxWLbitaG7yT6bPbKChq64_BTC" EntityType="CryptoAddress">
@@ -81,18 +83,19 @@
         <Attribute Name="CryptoCurrency">Bitcoin</Attribute>
         <Attribute Name="Confidence">100.0%</Attribute>
         <Attribute Name="RiskLevel">Unknown</Attribute>
-        <Attribute Name="Balance">939,022,830.98538995</Attribute>
+        <Attribute Name="Balance">939,243,957.01786005</Attribute>
         <Attribute Name="ClusterName">HTX.com (formerly Huobi)</Attribute>
         <Attribute Name="SourceFile">test.csv</Attribute>
         <Attribute Name="SourceSheet">N/A</Attribute>
         <Attribute Name="SourceLocation">Row 5, Col 3</Attribute>
         <Attribute Name="ExtractedDate">2025-06-30</Attribute>
         <Attribute Name="IsDuplicate">No</Attribute>
-        <Attribute Name="TotalReceived">177,263,445,443.34393311</Attribute>
-        <Attribute Name="TotalSent">184,665,640,490.03656006</Attribute>
-        <Attribute Name="TransactionCount">30452432</Attribute>
+        <Attribute Name="TotalReceived">177,264,816,359.23571777</Attribute>
+        <Attribute Name="TotalSent">184,668,997,021.05862427</Attribute>
+        <Attribute Name="TransactionCount">30452609</Attribute>
         <Attribute Name="ClusterCategory">exchange</Attribute>
-        <Attribute Name="HasExchangeExposure">No</Attribute>
+        <Attribute Name="ExchangeExposure">Bybit.com Exploit 2025-02-21 bc1qvej0k: $68,788.27 (sending_direct); Namebase.io: $36,247.01 (sending_direct); TuxExchange.com: $789.59 (sending_direct); BitGrail.com: $116,070.36 (sending_indirect); Ferma.cc: 0.0% (sending_indirect)</Attribute>
+        <Attribute Name="HasExchangeExposure">Yes</Attribute>
       </Attributes>
     </Entity>
     <Entity EntityId="addr_0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8_ETH" EntityType="CryptoAddress">
@@ -104,18 +107,19 @@
         <Attribute Name="CryptoCurrency">Ethereum</Attribute>
         <Attribute Name="Confidence">100.0%</Attribute>
         <Attribute Name="RiskLevel">Unknown</Attribute>
-        <Attribute Name="Balance">11,593,925,340.60280037</Attribute>
+        <Attribute Name="Balance">11,700,349,786.16357994</Attribute>
         <Attribute Name="ClusterName">Binance.com</Attribute>
         <Attribute Name="SourceFile">test.csv</Attribute>
         <Attribute Name="SourceSheet">N/A</Attribute>
         <Attribute Name="SourceLocation">Row 6, Col 3</Attribute>
         <Attribute Name="ExtractedDate">2025-06-30</Attribute>
         <Attribute Name="IsDuplicate">No</Attribute>
-        <Attribute Name="TotalReceived">515,654,113,333.18701172</Attribute>
-        <Attribute Name="TotalSent">512,257,176,215.94360352</Attribute>
-        <Attribute Name="TransactionCount">156246663</Attribute>
+        <Attribute Name="TotalReceived">515,675,003,491.95062256</Attribute>
+        <Attribute Name="TotalSent">512,303,922,479.59863281</Attribute>
+        <Attribute Name="TransactionCount">156251191</Attribute>
         <Attribute Name="ClusterCategory">exchange</Attribute>
-        <Attribute Name="HasExchangeExposure">No</Attribute>
+        <Attribute Name="ExchangeExposure">QuadrigaCX.com: 0.0% (sending_direct); 9jaCash.com: $2,937.53 (sending_direct); QuadrigaCX.com: 0.0% (sending_indirect); 9jaCash.com: $2,949.77 (sending_indirect); QuadrigaCX.com: 0.0% (receiving_direct)</Attribute>
+        <Attribute Name="HasExchangeExposure">Yes</Attribute>
       </Attributes>
     </Entity>
     <Entity EntityId="addr_0xdAC17F958D2ee523a2206206994597C13D831ec7_ETH" EntityType="CryptoAddress">
@@ -136,7 +140,7 @@
         <Attribute Name="IsDuplicate">No</Attribute>
         <Attribute Name="TotalReceived">0.00000000</Attribute>
         <Attribute Name="TotalSent">0.00000000</Attribute>
-        <Attribute Name="TransactionCount">342232789</Attribute>
+        <Attribute Name="TransactionCount">342256171</Attribute>
         <Attribute Name="ClusterCategory">token smart contract</Attribute>
         <Attribute Name="HasExchangeExposure">No</Attribute>
       </Attributes>
@@ -159,7 +163,7 @@
         <Attribute Name="IsDuplicate">No</Attribute>
         <Attribute Name="TotalReceived">0.00000000</Attribute>
         <Attribute Name="TotalSent">0.00000000</Attribute>
-        <Attribute Name="TransactionCount">165856895</Attribute>
+        <Attribute Name="TransactionCount">165879713</Attribute>
         <Attribute Name="ClusterCategory">token smart contract</Attribute>
         <Attribute Name="HasExchangeExposure">No</Attribute>
       </Attributes>
@@ -173,7 +177,7 @@
         <Attribute Name="CryptoCurrency">Tron</Attribute>
         <Attribute Name="Confidence">100.0%</Attribute>
         <Attribute Name="RiskLevel">Unknown</Attribute>
-        <Attribute Name="Balance">45,616.84196000</Attribute>
+        <Attribute Name="Balance">45,625.30209000</Attribute>
         <Attribute Name="ClusterName">Bitcoin TRC20 (BTCT) - TN3W4H6r [Tron]</Attribute>
         <Attribute Name="SourceFile">test.csv</Attribute>
         <Attribute Name="SourceSheet">N/A</Attribute>
@@ -182,9 +186,10 @@
         <Attribute Name="IsDuplicate">No</Attribute>
         <Attribute Name="TotalReceived">8,926.89532000</Attribute>
         <Attribute Name="TotalSent">0.00000000</Attribute>
-        <Attribute Name="TransactionCount">3606738</Attribute>
+        <Attribute Name="TransactionCount">3606751</Attribute>
         <Attribute Name="ClusterCategory">token smart contract</Attribute>
-        <Attribute Name="HasExchangeExposure">No</Attribute>
+        <Attribute Name="ExchangeExposure">Binance.com: 0.2% (receiving_direct); FTX.com: 3.5% (receiving_direct); Giottus.com: 0.0% (receiving_direct); ArtisTurba.com: 0.0% (receiving_indirect)</Attribute>
+        <Attribute Name="HasExchangeExposure">Yes</Attribute>
       </Attributes>
     </Entity>
     <Entity EntityId="cluster_Binance_com" EntityType="Cluster">
@@ -194,8 +199,8 @@
         <Attribute Name="ClusterName">Binance.com</Attribute>
         <Attribute Name="Category">exchange</Attribute>
         <Attribute Name="AddressCount">2</Attribute>
-        <Attribute Name="CryptoTypes">BTC, ETH</Attribute>
-        <Attribute Name="TotalBalance">62,601,008,485.46299744</Attribute>
+        <Attribute Name="CryptoTypes">ETH, BTC</Attribute>
+        <Attribute Name="TotalBalance">62,808,342,977.94786072</Attribute>
         <Attribute Name="RiskLevel">MEDIUM</Attribute>
         <Attribute Name="HighRiskAddresses">0</Attribute>
       </Attributes>
