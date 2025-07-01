@@ -1,0 +1,3 @@
+Advanced testing = python i2_testing_suite.py test.csv
+
+Simple test = python simple_i2_test.py

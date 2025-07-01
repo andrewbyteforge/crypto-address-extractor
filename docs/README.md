@@ -148,3 +148,20 @@ For issues and questions, please open an issue on GitHub.
 ---
 
 **Disclaimer:** This tool is for educational and legitimate purposes only. Always ensure compliance with applicable laws and terms of service when extracting and processing cryptocurrency addresses.
+
+
+
+Exposures Being Checked:
+Direct Exposure:
+
+Cryptocurrency Exchanges:
+
+Major centralized exchanges: Binance, Coinbase, Kraken, Bitfinex, Huobi, OKX, KuCoin, Gate.io, Bybit, Bitstamp, Gemini, Bittrex, Poloniex, Crypto.com, MEXC, etc.
+Decentralized exchanges: Uniswap, PancakeSwap, SushiSwap, Curve, Balancer
+Categories filtered: exchange, centralized exchange, cex, dex, decentralized exchange, trading platform, crypto exchange
+
+
+Darknet Markets:
+
+Known markets: Hydra, AlphaBay, Dream Market, Silk Road, Empire Market, White House Market, Dark0de, Torrez, Cannazon, Versus, etc.
+Categories: darknet market, darknet marketplace, dark market, illicit market, darknet vendor

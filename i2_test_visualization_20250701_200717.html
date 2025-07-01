@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>i2 Export Test - test.csv Analysis</title>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .stat-number { font-size: 24px; font-weight: bold; color: #667eea; }
+        .stat-label { color: #666; margin-top: 5px; }
+        #network { width: 100%; height: 600px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .info-panel { background: white; padding: 20px; border-radius: 10px; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .csv-info { background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        .crypto-types { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+        .crypto-badge { background: #667eea; color: white; padding: 5px 10px; border-radius: 15px; font-size: 12px; }
+        .controls { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        button { background: #667eea; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin: 2px; transition: background 0.3s; }
+        button:hover { background: #5a67d8; }
+        .address-list { max-height: 200px; overflow-y: auto; margin: 10px 0; }
+        .address-item { padding: 8px; background: #f8f9fa; margin: 5px 0; border-radius: 5px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 i2 Export Test Visualization</h1>
+        <p>Analysis of <strong>test.csv</strong> - Demonstrating i2 Analyst's Notebook Export Functionality</p>
+        <p>Generated: 2025-07-01 20:07:17</p>
+    </div>
+    
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-number">11</div>
+            <div class="stat-label">Total Entities</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">14</div>
+            <div class="stat-label">Relationships</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">7</div>
+            <div class="stat-label">Crypto Addresses</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">3</div>
+            <div class="stat-label">Crypto Types</div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button onclick="network.fit()">🔍 Fit View</button>
+        <button onclick="togglePhysics()">⚡ Toggle Physics</button>
+        <button onclick="showDetails()">📊 Show Details</button>
+        <button onclick="exportData()">💾 Export Data</button>
+    </div>
+    
+    <div id="network"></div>
+    
+    <div class="info-panel">
+        <h3>📄 CSV File Analysis</h3>
+        <div class="csv-info">
+            <strong>File:</strong> test.csv<br>
+            <strong>Size:</strong> 820 bytes<br>
+            <strong>Structure:</strong> 9 rows × 6 columns<br>
+            <strong>Headers:</strong> Transaction Date, Source, Destination Address, Amount, Currency...<br>
+            <strong>Crypto Keywords Found:</strong> bitcoin, btc, ethereum, eth, address, transaction
+        </div>
+        
+        <h4>🪙 Detected Cryptocurrency Addresses</h4>
+        <div class="crypto-types">
+            <span class="crypto-badge" style="background-color: #9945FF">SOL</span><span class="crypto-badge" style="background-color: #627EEA">ETH</span><span class="crypto-badge" style="background-color: #F7931A">BTC</span>
+        </div>
+        
+        <div class="address-list">
+            
+        <div class="address-item">
+            <strong>BTC:</strong> 3FKWSyWgZgBNeEATqZbWZpZgYHjdRDt9aD<br>
+            <small>Confidence: 0.90 | Location: Row 1, Col 2</small>
+        </div>
+        
+        <div class="address-item">
+            <strong>BTC:</strong> 1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s<br>
+            <small>Confidence: 0.90 | Location: Row 3, Col 2</small>
+        </div>
+        
+        <div class="address-item">
+            <strong>BTC:</strong> 3Cbq7aT1tY8kMxWLbitaG7yT6bPbKChq64<br>
+            <small>Confidence: 0.90 | Location: Row 4, Col 2</small>
+        </div>
+        
+        <div class="address-item">
+            <strong>ETH:</strong> 0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8<br>
+            <small>Confidence: 0.95 | Location: Row 5, Col 2</small>
+        </div>
+        
+        <div class="address-item">
+            <strong>ETH:</strong> 0xdAC17F958D2ee523a2206206994597C13D831ec7<br>
+            <small>Confidence: 0.95 | Location: Row 6, Col 2</small>
+        </div>
+        
+        <div class="address-item">
+            <strong>ETH:</strong> 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48<br>
+            <small>Confidence: 0.95 | Location: Row 7, Col 2</small>
+        </div>
+        
+        <div class="address-item">
+            <strong>SOL:</strong> TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9<br>
+            <small>Confidence: 0.56 | Location: Row 8, Col 2</small>
+        </div>
+        
+        </div>
+        
+        <h4>🎯 What This Demonstrates</h4>
+        <ul>
+            <li><strong>Address Detection:</strong> Pattern matching identifies cryptocurrency addresses in CSV data</li>
+            <li><strong>Entity Creation:</strong> Each address becomes an entity with metadata</li>
+            <li><strong>Relationship Mapping:</strong> Links show connections between addresses, file sources, and blockchain types</li>
+            <li><strong>Visual Analysis:</strong> Interactive graph enables investigation workflow</li>
+            <li><strong>i2 Compatibility:</strong> Data structure matches i2 Analyst's Notebook requirements</li>
+        </ul>
+        
+        <h4>📋 Next Steps for Real Investigation</h4>
+        <ol>
+            <li>Import the generated XML file into i2 Analyst's Notebook</li>
+            <li>Enhance with Chainalysis API data for cluster information</li>
+            <li>Add transaction flow analysis</li>
+            <li>Correlate with external intelligence sources</li>
+            <li>Develop investigation hypotheses based on patterns</li>
+        </ol>
+    </div>
+
+    <script>
+        // Prepare network data
+        var nodes = new vis.DataSet([{"id": "addr_3FKWSyWgZgBNeEATqZbWZpZgYHjdRDt9aD_BTC", "type": "CryptoAddress", "label": "3FKWSyWgZgBNeEATqZbW...(BTC)", "attributes": {"Address": "3FKWSyWgZgBNeEATqZbWZpZgYHjdRDt9aD", "CryptoType": "BTC", "Confidence": 0.9, "SourceLocation": "Row 1, Column 2", "SourceCell": "3FKWSyWgZgBNeEATqZbWZpZgYHjdRDt9aD", "RiskLevel": "MEDIUM", "DetectionMethod": "Pattern Matching"}, "color": "#F7931A", "size": 29.0}, {"id": "addr_1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s_BTC", "type": "CryptoAddress", "label": "1NDyJtNTjmwk5xPNhjgA...(BTC)", "attributes": {"Address": "1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s", "CryptoType": "BTC", "Confidence": 0.9, "SourceLocation": "Row 3, Column 2", "SourceCell": "1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s", "RiskLevel": "MEDIUM", "DetectionMethod": "Pattern Matching"}, "color": "#F7931A", "size": 29.0}, {"id": "addr_3Cbq7aT1tY8kMxWLbitaG7yT6bPbKChq64_BTC", "type": "CryptoAddress", "label": "3Cbq7aT1tY8kMxWLbita...(BTC)", "attributes": {"Address": "3Cbq7aT1tY8kMxWLbitaG7yT6bPbKChq64", "CryptoType": "BTC", "Confidence": 0.9, "SourceLocation": "Row 4, Column 2", "SourceCell": "3Cbq7aT1tY8kMxWLbitaG7yT6bPbKChq64", "RiskLevel": "MEDIUM", "DetectionMethod": "Pattern Matching"}, "color": "#F7931A", "size": 29.0}, {"id": "addr_0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8_ETH", "type": "CryptoAddress", "label": "0xBE0eB53F46cd790Cd1...(ETH)", "attributes": {"Address": "0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8", "CryptoType": "ETH", "Confidence": 0.95, "SourceLocation": "Row 5, Column 2", "SourceCell": "0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8", "RiskLevel": "MEDIUM", "DetectionMethod": "Pattern Matching"}, "color": "#627EEA", "size": 29.5}, {"id": "addr_0xdAC17F958D2ee523a2206206994597C13D831ec7_ETH", "type": "CryptoAddress", "label": "0xdAC17F958D2ee523a2...(ETH)", "attributes": {"Address": "0xdAC17F958D2ee523a2206206994597C13D831ec7", "CryptoType": "ETH", "Confidence": 0.95, "SourceLocation": "Row 6, Column 2", "SourceCell": "0xdAC17F958D2ee523a2206206994597C13D831ec7", "RiskLevel": "MEDIUM", "DetectionMethod": "Pattern Matching"}, "color": "#627EEA", "size": 29.5}, {"id": "addr_0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48_ETH", "type": "CryptoAddress", "label": "0xA0b86991c6218b36c1...(ETH)", "attributes": {"Address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "CryptoType": "ETH", "Confidence": 0.95, "SourceLocation": "Row 7, Column 2", "SourceCell": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "RiskLevel": "MEDIUM", "DetectionMethod": "Pattern Matching"}, "color": "#627EEA", "size": 29.5}, {"id": "addr_TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9_SOL", "type": "CryptoAddress", "label": "TN3W4H6rK2ce4vX9YnFQ...(SOL)", "attributes": {"Address": "TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9", "CryptoType": "SOL", "Confidence": 0.5599999999999999, "SourceLocation": "Row 8, Column 2", "SourceCell": "TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9", "RiskLevel": "MEDIUM", "DetectionMethod": "Pattern Matching"}, "color": "#9945FF", "size": 25.6}, {"id": "source_file_test_csv", "type": "SourceFile", "label": "test.csv", "attributes": {"FileName": "test.csv", "FileSize": 820, "TotalRows": 9, "TotalColumns": 6, "Headers": "Transaction Date, Source, Destination Address, Amount, Currency", "AnalyzedAt": "2025-07-01T20:07:17.031979", "CryptoKeywords": "bitcoin, btc, ethereum, eth, address, transaction"}, "color": "#95A5A6", "size": 25}, {"id": "crypto_type_SOL", "type": "CryptocurrencyType", "label": "SOL Blockchain", "attributes": {"CryptoType": "SOL", "AddressCount": 1, "Description": "Solana - High-performance blockchain"}, "color": "#9945FF", "size": 30}, {"id": "crypto_type_ETH", "type": "CryptocurrencyType", "label": "ETH Blockchain", "attributes": {"CryptoType": "ETH", "AddressCount": 3, "Description": "Ethereum - Smart contract platform"}, "color": "#627EEA", "size": 30}, {"id": "crypto_type_BTC", "type": "CryptocurrencyType", "label": "BTC Blockchain", "attributes": {"CryptoType": "BTC", "AddressCount": 3, "Description": "Bitcoin - The original cryptocurrency"}, "color": "#F7931A", "size": 30}]);
+        var edges = new vis.DataSet([{"id": "link_3FKWSyWgZg_to_file", "from": "addr_3FKWSyWgZgBNeEATqZbWZpZgYHjdRDt9aD_BTC", "to": "source_file_test_csv", "type": "ExtractedFrom", "label": "Extracted from test.csv", "attributes": {"ExtractionMethod": "Pattern Matching", "Confidence": 0.9}, "color": "#7F8C8D", "width": 2}, {"id": "link_1NDyJtNTjm_to_file", "from": "addr_1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s_BTC", "to": "source_file_test_csv", "type": "ExtractedFrom", "label": "Extracted from test.csv", "attributes": {"ExtractionMethod": "Pattern Matching", "Confidence": 0.9}, "color": "#7F8C8D", "width": 2}, {"id": "link_3Cbq7aT1tY_to_file", "from": "addr_3Cbq7aT1tY8kMxWLbitaG7yT6bPbKChq64_BTC", "to": "source_file_test_csv", "type": "ExtractedFrom", "label": "Extracted from test.csv", "attributes": {"ExtractionMethod": "Pattern Matching", "Confidence": 0.9}, "color": "#7F8C8D", "width": 2}, {"id": "link_0xBE0eB53F_to_file", "from": "addr_0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8_ETH", "to": "source_file_test_csv", "type": "ExtractedFrom", "label": "Extracted from test.csv", "attributes": {"ExtractionMethod": "Pattern Matching", "Confidence": 0.95}, "color": "#7F8C8D", "width": 2}, {"id": "link_0xdAC17F95_to_file", "from": "addr_0xdAC17F958D2ee523a2206206994597C13D831ec7_ETH", "to": "source_file_test_csv", "type": "ExtractedFrom", "label": "Extracted from test.csv", "attributes": {"ExtractionMethod": "Pattern Matching", "Confidence": 0.95}, "color": "#7F8C8D", "width": 2}, {"id": "link_0xA0b86991_to_file", "from": "addr_0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48_ETH", "to": "source_file_test_csv", "type": "ExtractedFrom", "label": "Extracted from test.csv", "attributes": {"ExtractionMethod": "Pattern Matching", "Confidence": 0.95}, "color": "#7F8C8D", "width": 2}, {"id": "link_TN3W4H6rK2_to_file", "from": "addr_TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9_SOL", "to": "source_file_test_csv", "type": "ExtractedFrom", "label": "Extracted from test.csv", "attributes": {"ExtractionMethod": "Pattern Matching", "Confidence": 0.5599999999999999}, "color": "#7F8C8D", "width": 2}, {"id": "link_TN3W4H6rK2_to_SOL", "from": "addr_TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9_SOL", "to": "crypto_type_SOL", "type": "BelongsTo", "label": "Uses SOL blockchain", "attributes": {"RelationshipType": "blockchain_membership"}, "color": "#9945FF", "width": 3}, {"id": "link_0xBE0eB53F_to_ETH", "from": "addr_0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8_ETH", "to": "crypto_type_ETH", "type": "BelongsTo", "label": "Uses ETH blockchain", "attributes": {"RelationshipType": "blockchain_membership"}, "color": "#627EEA", "width": 3}, {"id": "link_0xdAC17F95_to_ETH", "from": "addr_0xdAC17F958D2ee523a2206206994597C13D831ec7_ETH", "to": "crypto_type_ETH", "type": "BelongsTo", "label": "Uses ETH blockchain", "attributes": {"RelationshipType": "blockchain_membership"}, "color": "#627EEA", "width": 3}, {"id": "link_0xA0b86991_to_ETH", "from": "addr_0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48_ETH", "to": "crypto_type_ETH", "type": "BelongsTo", "label": "Uses ETH blockchain", "attributes": {"RelationshipType": "blockchain_membership"}, "color": "#627EEA", "width": 3}, {"id": "link_3FKWSyWgZg_to_BTC", "from": "addr_3FKWSyWgZgBNeEATqZbWZpZgYHjdRDt9aD_BTC", "to": "crypto_type_BTC", "type": "BelongsTo", "label": "Uses BTC blockchain", "attributes": {"RelationshipType": "blockchain_membership"}, "color": "#F7931A", "width": 3}, {"id": "link_1NDyJtNTjm_to_BTC", "from": "addr_1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s_BTC", "to": "crypto_type_BTC", "type": "BelongsTo", "label": "Uses BTC blockchain", "attributes": {"RelationshipType": "blockchain_membership"}, "color": "#F7931A", "width": 3}, {"id": "link_3Cbq7aT1tY_to_BTC", "from": "addr_3Cbq7aT1tY8kMxWLbitaG7yT6bPbKChq64_BTC", "to": "crypto_type_BTC", "type": "BelongsTo", "label": "Uses BTC blockchain", "attributes": {"RelationshipType": "blockchain_membership"}, "color": "#F7931A", "width": 3}]);
+        var data = { nodes: nodes, edges: edges };
+        
+        // Network options
+        var options = {
+            nodes: {
+                shape: 'dot',
+                font: { size: 14, color: '#333' },
+                borderWidth: 2,
+                shadow: { enabled: true, color: 'rgba(0,0,0,0.2)', size: 10, x: 2, y: 2 }
+            },
+            edges: {
+                width: 2,
+                shadow: { enabled: true, color: 'rgba(0,0,0,0.1)', size: 5, x: 1, y: 1 },
+                smooth: { type: 'continuous' },
+                arrows: { to: { enabled: true, scaleFactor: 0.5 } }
+            },
+            physics: {
+                enabled: true,
+                stabilization: { iterations: 100 },
+                barnesHut: { gravitationalConstant: -3000, springConstant: 0.004, springLength: 150 }
+            },
+            interaction: {
+                hover: true,
+                tooltipDelay: 200,
+                hideEdgesOnDrag: true
+            }
+        };
+        
+        // Create network
+        var container = document.getElementById('network');
+        var network = new vis.Network(container, data, options);
+        
+        // Event handlers
+        network.on("click", function (params) {
+            if (params.nodes.length > 0) {
+                var nodeId = params.nodes[0];
+                var node = nodes.get(nodeId);
+                var details = "Entity Details:\n\n";
+                details += "ID: " + node.id + "\n";
+                details += "Type: " + node.type + "\n";
+                details += "Label: " + node.label + "\n\n";
+                details += "Attributes:\n";
+                for (var key in node.attributes) {
+                    details += "• " + key + ": " + node.attributes[key] + "\n";
+                }
+                alert(details);
+            }
+        });
+        
+        // Control functions
+        function togglePhysics() {
+            var enabled = !options.physics.enabled;
+            options.physics.enabled = enabled;
+            network.setOptions(options);
+        }
+        
+        function showDetails() {
+            var summary = "Network Analysis Summary:\n\n";
+            summary += "Total Entities: " + nodes.length + "\n";
+            summary += "Total Relationships: " + edges.length + "\n\n";
+            summary += "Entity Types:\n";
+            
+            var entityTypes = {};
+            nodes.forEach(function(node) {
+                entityTypes[node.type] = (entityTypes[node.type] || 0) + 1;
+            });
+            
+            for (var type in entityTypes) {
+                summary += "• " + type + ": " + entityTypes[type] + "\n";
+            }
+            
+            alert(summary);
+        }
+        
+        function exportData() {
+            var exportData = {
+                entities: nodes.get(),
+                links: edges.get(),
+                generated: new Date().toISOString()
+            };
+            
+            var dataStr = JSON.stringify(exportData, null, 2);
+            var dataBlob = new Blob([dataStr], {type: 'application/json'});
+            var url = URL.createObjectURL(dataBlob);
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = 'i2_test_data.json';
+            link.click();
+        }
+        
+        // Auto-fit on load
+        network.once("stabilizationIterationsDone", function() {
+            network.fit();
+        });
+    </script>
+</body>
+</html>
