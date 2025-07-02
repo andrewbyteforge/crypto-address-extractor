@@ -899,14 +899,14 @@ class FileHandler:
                 ("Transfer Count", "Number of transactions involving this address", "157, 1205"),
                 ("Direct Exchange Exposure", "Exchanges that directly interact with this address", "Binance: 45.2%, Coinbase: 23.1%"),
                 ("Indirect Exchange Exposure", "Exchanges connected through 1-2 intermediate addresses", "Kraken: 12.5%, Bitfinex: 8.3%"),
-                ("Receiving Direct Exposure", "Exchanges this address directly receives funds from", "Binance: 60.5%"),
-                ("Receiving Indirect Exposure", "Exchanges connected to incoming transactions", "Coinbase: 25.0%"),
-                ("Sending Direct Exposure", "Exchanges this address directly sends funds to", "Kraken: 80.2%"),
-                ("Sending Indirect Exposure", "Exchanges connected to outgoing transactions", "Bitfinex: 15.5%"),
-                ("Darknet Market", "Whether address has known connections to darknet markets", "Y (Yes), N (No)"),
-                ("Risk Level", "Risk assessment based on transaction patterns and associations", "Low, Medium, High, Very High"),
-                ("Entity", "Known entity name associated with this address cluster", "Binance Hot Wallet, Coinbase"),
-                ("Cluster Category", "Category classification of the address cluster", "Exchange, Mixer, DeFi Protocol")
+                ("Receiving Direct Exposure", "Exchanges this address directly receives funds from", "Coinbase: 67.8%, Kraken: 15.2%"),
+                ("Receiving Indirect Exposure", "Exchanges connected to incoming transactions via intermediates", "Binance: 23.1%, Huobi: 8.9%"),
+                ("Sending Direct Exposure", "Exchanges this address directly sends funds to", "Bitfinex: 45.6%, OKEx: 12.3%"),
+                ("Sending Indirect Exposure", "Exchanges connected to outgoing transactions via intermediates", "Coinbase: 34.5%, Kraken: 11.2%"),
+                ("Darknet Market", "Whether address has any connection to darknet markets", "Y (Yes) or N (No)"),
+                ("Risk Level", "API-determined risk level based on transaction patterns", "Low, Medium, High, Critical"),
+                ("Entity", "Known entity name if address belongs to a service", "Binance Hot Wallet, Coinbase"),
+                ("Cluster Category", "Category of the cluster this address belongs to", "Exchange, Mixer, DeFi, etc.")
             ]
             
             # Write basic definitions
@@ -914,42 +914,32 @@ class FileHandler:
             for col_name, description, example in basic_definitions:
                 ws.cell(row=current_row, column=1, value=col_name).font = Font(bold=True)
                 ws.cell(row=current_row, column=2, value=description)
-                ws.cell(row=current_row, column=3, value=example).font = Font(italic=True)
+                ws.cell(row=current_row, column=3, value=example)
                 current_row += 1
             
             # Add API definitions if API data is included
             if include_api_data:
-                # Add section header for API data
+                # Add a separator
                 current_row += 1
-                ws.cell(row=current_row, column=1, value="API Enhanced Columns").font = Font(size=12, bold=True, color="FFFFFF")
-                ws.cell(row=current_row, column=1).fill = PatternFill(start_color="D99694", end_color="D99694", fill_type="solid")
+                ws.cell(row=current_row, column=1, value="API DATA COLUMNS").font = Font(bold=True, size=12, color="FF0000")
                 ws.merge_cells(f'A{current_row}:C{current_row}')
                 current_row += 1
                 
-                ws.cell(row=current_row, column=1, value="(These columns appear when Chainalysis API analysis is enabled)")
-                ws.cell(row=current_row, column=1).font = Font(italic=True, size=10)
-                ws.merge_cells(f'A{current_row}:C{current_row}')
-                current_row += 1
-                
-                # Write API definitions
                 for col_name, description, example in api_definitions:
                     ws.cell(row=current_row, column=1, value=col_name).font = Font(bold=True)
                     ws.cell(row=current_row, column=2, value=description)
-                    ws.cell(row=current_row, column=3, value=example).font = Font(italic=True)
+                    ws.cell(row=current_row, column=3, value=example)
                     current_row += 1
             
             # Add footer information
             current_row += 2
-            ws.cell(row=current_row, column=1, value="Additional Information:")
-            ws.cell(row=current_row, column=1).font = Font(bold=True, size=12)
-            current_row += 1
-            
             footer_info = [
-                "• Addresses are extracted using advanced pattern matching and checksum validation",
-                "• Confidence scores are based on format validation and checksum verification",
-                "• API data requires a valid Chainalysis API key and active internet connection",
-                "• Exchange exposure percentages represent transaction volume relationships",
-                "• Duplicate detection helps identify addresses that appear in multiple source files"
+                "IMPORTANT NOTES:",
+                "• Duplicate addresses are highlighted in yellow in the 'All Addresses' sheet",
+                "• Individual cryptocurrency sheets show only unique addresses (no duplicates)",
+                "• Exchange exposure percentages show the portion of funds connected to each exchange",
+                "• Darknet market connections are flagged for compliance and investigation purposes",
+                "• This extraction helps identify addresses that appear in multiple source files"
             ]
             
             for info in footer_info:
@@ -979,8 +969,14 @@ class FileHandler:
             self.logger.info("✓ Created Column Definitions sheet successfully")
             
         except Exception as e:
-            self.logger.error(f"Failed to create Column Definitions sheet: {str(e)}")
-            raise
+            error_msg = f"Failed to create Column Definitions sheet: {str(e)}"
+            self.logger.error(error_msg, exc_info=True)
+            raise Exception(error_msg) from e
+
+
+
+
+
 
     def write_to_excel_enhanced(self, addresses: List[ExtractedAddress], output_path: str,
                             include_api_data: bool = False) -> None:
@@ -1053,47 +1049,7 @@ class FileHandler:
             self.logger.error(error_msg, exc_info=True)
             raise Exception(error_msg) from e
 
-    # Instructions for implementation:
-    """
-    IMPLEMENTATION INSTRUCTIONS
-    ==========================
-
-    1. **Add the new method to file_handler.py**:
-    - Copy the `_create_column_definitions_sheet` method into your FileHandler class
-    - Ensure proper indentation and that it's inside the class definition
-
-    2. **Update the write_to_excel method**:
-    - Replace the existing `write_to_excel` method with `write_to_excel_enhanced`
-    - Or manually add the call to `self._create_column_definitions_sheet(wb, include_api_data)` 
-        right after the Summary sheet creation and before All Addresses sheet creation
-
-    3. **Required imports** (should already be present in file_handler.py):
-    - from openpyxl import Workbook
-    - from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-    - from openpyxl.utils import get_column_letter
-    - from typing import List
-    - from collections import defaultdict
-
-    4. **Error handling**:
-    - The method includes comprehensive error handling and logging
-    - Failures in creating the definitions sheet won't crash the entire export process
-
-    5. **Sheet positioning**:
-    - Summary sheet (position 0)
-    - Column Definitions sheet (position 1) ← NEW
-    - All Addresses sheet (position 2)
-    - Individual crypto sheets (positions 3+)
-
-    The Column Definitions sheet will help users understand:
-    - What each column represents
-    - Example values for each field
-    - Differences between basic and API-enhanced columns
-    - Additional context about the extraction process
-    """
-
-
-
-
+  
     def _create_crypto_sheet(self, wb: Workbook, crypto_name: str,
                            addresses: List[ExtractedAddress],
                            include_api_data: bool = False) -> None:
