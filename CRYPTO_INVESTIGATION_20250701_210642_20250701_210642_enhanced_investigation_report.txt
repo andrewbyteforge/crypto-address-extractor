@@ -2,10 +2,10 @@
 ENHANCED CRYPTOCURRENCY INVESTIGATION REPORT
 ====================================================================================================
 
-Report Generated: 2025-07-01 20:37:35
+Report Generated: 2025-07-01 21:06:42
 Analysis Tool: Crypto Address Extractor - Enhanced Features
-Total Entities Analyzed: 0
-Total Relationships: 0
+Total Entities Analyzed: 8
+Total Relationships: 56
 
 EXECUTIVE SUMMARY
 --------------------------------------------------
@@ -18,11 +18,45 @@ INVESTIGATION PRIORITIES
 --------------------------------------------------
 Top 10 Priority Entities for Investigation:
 
+ 1. 3FKWSyWgZgBNeEATqZbW...(UNKNOWN)
+     Risk Score: 0.000
+     Balance: $0.00
+
+ 2. bc1qxy2kgdygjrsqtzq2...(UNKNOWN)
+     Risk Score: 0.000
+     Balance: $0.00
+
+ 3. 1NDyJtNTjmwk5xPNhjgA...(UNKNOWN)
+     Risk Score: 0.000
+     Balance: $0.00
+
+ 4. 3Cbq7aT1tY8kMxWLbita...(UNKNOWN)
+     Risk Score: 0.000
+     Balance: $0.00
+
+ 5. 0xBE0eB53F46cd790Cd1...(UNKNOWN)
+     Risk Score: 0.000
+     Balance: $0.00
+
+ 6. 0xdAC17F958D2ee523a2...(UNKNOWN)
+     Risk Score: 0.000
+     Balance: $0.00
+
+ 7. 0xA0b86991c6218b36c1...(UNKNOWN)
+     Risk Score: 0.000
+     Balance: $0.00
+
+ 8. TN3W4H6rK2ce4vX9YnFQ...(UNKNOWN)
+     Risk Score: 0.000
+     Balance: $0.00
+
 TECHNICAL ANALYSIS DETAILS
 --------------------------------------------------
 Entity Type Distribution:
+  CryptoAddress: 8
 
 Risk Level Distribution:
+  LOW: 8
 
 ====================================================================================================
 END OF ENHANCED INVESTIGATION REPORT

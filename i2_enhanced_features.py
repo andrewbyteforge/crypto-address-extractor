@@ -780,76 +780,989 @@ class i2EnhancedFeatures:
         return patterns
     
     def _generate_dashboard_html(self, entities: List, links: List, 
-                               insights: List[InvestigativeInsight],
-                               flows: List[MoneyFlowPath] = None,
-                               clusters: List[RiskCluster] = None) -> str:
-        """Generate HTML dashboard content."""
-        html_template = f"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cryptocurrency Investigation Dashboard</title>
-    <style>
-        body {{ font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }}
-        .dashboard {{ max-width: 1200px; margin: 0 auto; }}
-        .header {{ background-color: #2c3e50; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }}
-        .stats-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px; }}
-        .stat-card {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-        .stat-number {{ font-size: 2em; font-weight: bold; color: #3498db; }}
-        .insights {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }}
-        .insight {{ margin-bottom: 15px; padding: 15px; border-left: 4px solid #e74c3c; background-color: #fdf2f2; }}
-        .insight.high {{ border-left-color: #f39c12; background-color: #fef9e7; }}
-        .insight.medium {{ border-left-color: #f1c40f; background-color: #fcf8e3; }}
-        .insight.low {{ border-left-color: #27ae60; background-color: #eafaf1; }}
-        .clusters {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-        .cluster {{ margin-bottom: 10px; padding: 10px; background-color: #ecf0f1; border-radius: 4px; }}
-    </style>
-</head>
-<body>
-    <div class="dashboard">
-        <div class="header">
-            <h1>🔍 Cryptocurrency Investigation Dashboard</h1>
-            <p>Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                            insights: List, flows: List = None,
+                            clusters: List = None) -> str:
+        """
+        Generate complete HTML dashboard content with interactive network visualization.
+        
+        Args:
+            entities: List of entity objects
+            links: List of link objects  
+            insights: List of investigative insights
+            flows: Optional money flow paths
+            clusters: Optional risk clusters
+            
+        Returns:
+            str: Complete HTML content for interactive dashboard
+            
+        Raises:
+            Exception: If HTML generation fails
+        """
+        try:
+            self.logger.info("Generating complete dashboard HTML with network visualization")
+            
+            # Convert entities to vis.js nodes format
+            nodes_data = []
+            for entity in entities:
+                try:
+                    # Get entity attributes safely
+                    attributes = getattr(entity, 'attributes', {})
+                    entity_type = getattr(entity, 'entity_type', 'Unknown')
+                    
+                    node = {
+                        'id': getattr(entity, 'entity_id', f'entity_{len(nodes_data)}'),
+                        'label': getattr(entity, 'label', 'Unknown')[:25] + ('...' if len(getattr(entity, 'label', '')) > 25 else ''),
+                        'title': self._generate_node_tooltip(entity),
+                        'group': entity_type,
+                        'color': self._get_entity_color(entity_type),
+                        'size': self._calculate_node_size(entity),
+                        'borderWidth': 3 if getattr(entity, 'risk_score', 0) > 0.7 else 1
+                    }
+                    nodes_data.append(node)
+                except Exception as e:
+                    self.logger.warning(f"Error processing entity: {e}")
+                    continue
+            
+            # Convert links to vis.js edges format
+            edges_data = []
+            for link in links:
+                try:
+                    # Get link attributes safely  
+                    attributes = getattr(link, 'attributes', {})
+                    link_type = getattr(link, 'link_type', 'Unknown')
+                    
+                    edge = {
+                        'from': getattr(link, 'from_entity', getattr(link, 'from', '')),
+                        'to': getattr(link, 'to_entity', getattr(link, 'to', '')),
+                        'label': getattr(link, 'label', '')[:15],
+                        'title': self._generate_edge_tooltip(link),
+                        'color': self._get_link_color(link_type),
+                        'width': max(1, getattr(link, 'strength', 0.5) * 4),
+                        'arrows': {'to': {'enabled': True, 'scaleFactor': 0.6}}
+                    }
+                    edges_data.append(edge)
+                except Exception as e:
+                    self.logger.warning(f"Error processing link: {e}")
+                    continue
+            
+            # Generate statistics
+            stats = self._generate_dashboard_stats(entities, links, insights)
+            
+            # Generate insights HTML
+            insights_html = self._generate_insights_html(insights) if insights else '<p>No insights generated yet.</p>'
+            
+            # Generate clusters HTML
+            clusters_html = self._generate_clusters_html(clusters) if clusters else '<p>No risk clusters detected.</p>'
+            
+            # Create complete HTML template
+            html_template = f"""<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Enhanced Cryptocurrency Investigation Dashboard</title>
+        <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+        <style>
+            body {{ 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                margin: 0; 
+                padding: 20px; 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+            }}
+            .dashboard {{ 
+                max-width: 1400px; 
+                margin: 0 auto; 
+                background: rgba(255,255,255,0.95);
+                border-radius: 15px;
+                padding: 20px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            }}
+            .header {{ 
+                background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); 
+                color: white; 
+                padding: 25px; 
+                border-radius: 12px; 
+                margin-bottom: 25px; 
+                text-align: center;
+            }}
+            .header h1 {{
+                margin: 0 0 10px 0;
+                font-size: 2.2em;
+                font-weight: 600;
+            }}
+            .header p {{
+                margin: 5px 0;
+                opacity: 0.9;
+            }}
+            .stats-grid {{ 
+                display: grid; 
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+                gap: 20px; 
+                margin-bottom: 25px; 
+            }}
+            .stat-card {{ 
+                background: white; 
+                padding: 20px; 
+                border-radius: 12px; 
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+                text-align: center;
+                border-left: 4px solid #3498db;
+                transition: transform 0.2s;
+            }}
+            .stat-card:hover {{
+                transform: translateY(-2px);
+            }}
+            .stat-number {{ 
+                font-size: 2.5em; 
+                font-weight: bold; 
+                color: #2c3e50; 
+                margin-bottom: 5px;
+            }}
+            .stat-label {{ 
+                color: #7f8c8d; 
+                font-weight: 500;
+                text-transform: uppercase;
+                font-size: 0.9em;
+                letter-spacing: 1px;
+            }}
+            .controls {{ 
+                background: white; 
+                padding: 20px; 
+                border-radius: 12px; 
+                margin-bottom: 20px; 
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                text-align: center;
+            }}
+            .controls h3 {{
+                margin: 0 0 15px 0;
+                color: #2c3e50;
+            }}
+            button {{ 
+                background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); 
+                color: white; 
+                border: none; 
+                padding: 12px 20px; 
+                border-radius: 8px; 
+                cursor: pointer; 
+                margin: 5px; 
+                font-weight: 500;
+                transition: all 0.3s;
+                box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+            }}
+            button:hover {{ 
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+            }}
+            button:active {{
+                transform: translateY(0);
+            }}
+            .network-container {{
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                margin-bottom: 25px;
+                overflow: hidden;
+            }}
+            .network-header {{
+                background: #34495e;
+                color: white;
+                padding: 15px 20px;
+                font-size: 1.1em;
+                font-weight: 600;
+            }}
+            #network {{ 
+                width: 100%; 
+                height: 600px; 
+                background: #fafafa;
+                border: none;
+            }}
+            .insights {{ 
+                background: white; 
+                padding: 25px; 
+                border-radius: 12px; 
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+                margin-bottom: 25px; 
+            }}
+            .insights h2 {{
+                margin: 0 0 20px 0;
+                color: #2c3e50;
+                border-bottom: 2px solid #ecf0f1;
+                padding-bottom: 10px;
+            }}
+            .insight {{ 
+                margin-bottom: 15px; 
+                padding: 18px; 
+                border-radius: 8px;
+                border-left: 4px solid #e74c3c; 
+                background-color: #fdf2f2; 
+                transition: all 0.2s;
+            }}
+            .insight:hover {{
+                transform: translateX(5px);
+            }}
+            .insight.critical {{ 
+                border-left-color: #e74c3c; 
+                background-color: #fdf2f2; 
+            }}
+            .insight.high {{ 
+                border-left-color: #f39c12; 
+                background-color: #fef9e7; 
+            }}
+            .insight.medium {{ 
+                border-left-color: #f1c40f; 
+                background-color: #fcf8e3; 
+            }}
+            .insight.low {{ 
+                border-left-color: #27ae60; 
+                background-color: #eafaf1; 
+            }}
+            .insight-title {{
+                font-weight: bold;
+                font-size: 1.1em;
+                margin-bottom: 8px;
+                color: #2c3e50;
+            }}
+            .insight-description {{
+                margin-bottom: 10px;
+                line-height: 1.5;
+            }}
+            .insight-entities {{
+                font-size: 0.9em;
+                color: #7f8c8d;
+                font-style: italic;
+            }}
+            .clusters {{ 
+                background: white; 
+                padding: 25px; 
+                border-radius: 12px; 
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            }}
+            .clusters h2 {{
+                margin: 0 0 20px 0;
+                color: #2c3e50;
+                border-bottom: 2px solid #ecf0f1;
+                padding-bottom: 10px;
+            }}
+            .cluster {{ 
+                margin-bottom: 15px; 
+                padding: 15px; 
+                background: linear-gradient(135deg, #ecf0f1 0%, #f8f9fa 100%); 
+                border-radius: 8px; 
+                border-left: 4px solid #3498db;
+            }}
+            .cluster-title {{
+                font-weight: bold;
+                color: #2c3e50;
+                margin-bottom: 8px;
+            }}
+            .legend {{ 
+                background: white; 
+                padding: 20px; 
+                border-radius: 12px; 
+                margin-top: 25px; 
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            }}
+            .legend h3 {{
+                margin: 0 0 15px 0;
+                color: #2c3e50;
+            }}
+            .legend-section {{
+                margin-bottom: 15px;
+            }}
+            .legend-item {{ 
+                display: inline-block; 
+                margin: 5px 10px; 
+                padding: 5px 10px;
+                background: #f8f9fa;
+                border-radius: 15px;
+                font-size: 0.9em;
+            }}
+            .legend-color {{ 
+                width: 15px; 
+                height: 15px; 
+                display: inline-block; 
+                margin-right: 8px; 
+                vertical-align: middle; 
+                border-radius: 50%;
+                border: 1px solid #ddd;
+            }}
+            .status-indicator {{
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #27ae60;
+                color: white;
+                padding: 10px 15px;
+                border-radius: 20px;
+                font-size: 0.9em;
+                z-index: 1000;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="status-indicator">
+            🟢 Dashboard Active
         </div>
         
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-number">{len(entities)}</div>
-                <div>Total Entities</div>
+        <div class="dashboard">
+            <div class="header">
+                <h1>🔍 Enhanced Cryptocurrency Investigation Dashboard</h1>
+                <p><strong>Generated:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                <p><strong>Analysis Level:</strong> Advanced Pattern Detection & Risk Assessment</p>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{len(links)}</div>
-                <div>Relationships</div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">{stats['total_entities']}</div>
+                    <div class="stat-label">Total Entities</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{stats['total_relationships']}</div>
+                    <div class="stat-label">Relationships</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{stats['critical_insights']}</div>
+                    <div class="stat-label">Critical Findings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{stats['high_risk_entities']}</div>
+                    <div class="stat-label">High Risk Entities</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{stats['crypto_types']}</div>
+                    <div class="stat-label">Crypto Types</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{stats['unique_sources']}</div>
+                    <div class="stat-label">Data Sources</div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{len([i for i in insights if i.severity == 'CRITICAL'])}</div>
-                <div>Critical Issues</div>
+            
+            <div class="controls">
+                <h3>🎛️ Interactive Network Controls</h3>
+                <button onclick="network.fit()" title="Fit all nodes in view">🔍 Fit View</button>
+                <button onclick="togglePhysics()" title="Enable/disable node movement">⚡ Toggle Physics</button>
+                <button onclick="highlightHighRisk()" title="Highlight high-risk entities">⚠️ Show High Risk</button>
+                <button onclick="showClusters()" title="Group related entities">🎯 Show Clusters</button>
+                <button onclick="exportData()" title="Export network data">💾 Export Data</button>
+                <button onclick="showNetworkStats()" title="Display network statistics">📊 Show Stats</button>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{len([e for e in entities if hasattr(e, 'attributes') and e.attributes.get('DarknetExposure') == 'YES'])}</div>
-                <div>Darknet Exposed</div>
+            
+            <div class="network-container">
+                <div class="network-header">
+                    🌐 Interactive Relationship Network - Click nodes and edges for details
+                </div>
+                <div id="network"></div>
+            </div>
+            
+            <div class="insights">
+                <h2>🚨 Key Investigative Insights</h2>
+                {insights_html}
+            </div>
+            
+            <div class="clusters">
+                <h2>🎯 Risk Clusters & Patterns</h2>
+                {clusters_html}
+            </div>
+            
+            <div class="legend">
+                <h3>🏷️ Visualization Legend</h3>
+                <div class="legend-section">
+                    <h4>Entity Types:</h4>
+                    {self._generate_entity_legend()}
+                </div>
+                <div class="legend-section">
+                    <h4>Relationship Types:</h4>
+                    {self._generate_relationship_legend()}
+                </div>
+                <div class="legend-section">
+                    <h4>Risk Levels:</h4>
+                    <span class="legend-item"><span class="legend-color" style="background-color: #e74c3c;"></span>High Risk (>0.7)</span>
+                    <span class="legend-item"><span class="legend-color" style="background-color: #f39c12;"></span>Medium Risk (0.3-0.7)</span>
+                    <span class="legend-item"><span class="legend-color" style="background-color: #27ae60;"></span>Low Risk (<0.3)</span>
+                </div>
             </div>
         </div>
+
+        <script type="text/javascript">
+            // Network data
+            var nodes = new vis.DataSet({json.dumps(nodes_data, indent=2)});
+            var edges = new vis.DataSet({json.dumps(edges_data, indent=2)});
+            var data = {{ nodes: nodes, edges: edges }};
+            
+            // Network options with enhanced styling
+            var options = {{
+                nodes: {{
+                    shape: 'dot',
+                    size: 15,
+                    font: {{ 
+                        size: 12, 
+                        color: '#2c3e50',
+                        strokeWidth: 2,
+                        strokeColor: '#ffffff'
+                    }},
+                    borderWidth: 2,
+                    shadow: {{
+                        enabled: true,
+                        color: 'rgba(0,0,0,0.2)',
+                        size: 8,
+                        x: 2,
+                        y: 2
+                    }},
+                    chosen: {{
+                        node: function(values, id, selected, hovering) {{
+                            values.shadow = true;
+                            values.shadowColor = 'rgba(0,0,0,0.4)';
+                            values.shadowSize = 12;
+                        }}
+                    }}
+                }},
+                edges: {{
+                    width: 2,
+                    shadow: {{
+                        enabled: true,
+                        color: 'rgba(0,0,0,0.1)',
+                        size: 3,
+                        x: 1,
+                        y: 1
+                    }},
+                    smooth: {{ 
+                        type: 'continuous',
+                        forceDirection: 'none',
+                        roundness: 0.5
+                    }},
+                    arrows: {{ 
+                        to: {{ 
+                            enabled: true, 
+                            scaleFactor: 0.6,
+                            type: 'arrow'
+                        }} 
+                    }},
+                    chosen: {{
+                        edge: function(values, id, selected, hovering) {{
+                            values.width = values.width * 1.5;
+                            values.shadow = true;
+                        }}
+                    }}
+                }},
+                physics: {{
+                    enabled: true,
+                    stabilization: {{ iterations: 150 }},
+                    barnesHut: {{ 
+                        gravitationalConstant: -2500, 
+                        springConstant: 0.002, 
+                        springLength: 180,
+                        damping: 0.1
+                    }},
+                    maxVelocity: 30,
+                    minVelocity: 0.1,
+                    solver: 'barnesHut'
+                }},
+                interaction: {{
+                    hover: true,
+                    tooltipDelay: 200,
+                    hideEdgesOnDrag: true,
+                    hideNodesOnDrag: false
+                }},
+                layout: {{
+                    improvedLayout: true,
+                    clusterThreshold: 150
+                }}
+            }};
+            
+            // Create network
+            var container = document.getElementById('network');
+            var network = new vis.Network(container, data, options);
+            
+            // Network event handlers
+            network.on("click", function (params) {{
+                if (params.nodes.length > 0) {{
+                    var nodeId = params.nodes[0];
+                    var node = nodes.get(nodeId);
+                    showNodeDetails(node);
+                }} else if (params.edges.length > 0) {{
+                    var edgeId = params.edges[0];
+                    var edge = edges.get(edgeId);
+                    showEdgeDetails(edge);
+                }}
+            }});
+            
+            network.on("hoverNode", function(params) {{
+                // Change cursor to pointer
+                container.style.cursor = 'pointer';
+            }});
+            
+            network.on("blurNode", function(params) {{
+                // Reset cursor
+                container.style.cursor = 'default';
+            }});
+            
+            // Control functions
+            function togglePhysics() {{
+                var enabled = !options.physics.enabled;
+                options.physics.enabled = enabled;
+                network.setOptions(options);
+                
+                // Update button text
+                var button = event.target;
+                button.innerHTML = enabled ? '⏸️ Stop Physics' : '▶️ Start Physics';
+            }}
+            
+            function highlightHighRisk() {{
+                var nodeUpdate = [];
+                nodes.forEach(function(node) {{
+                    var newNode = {{...node}};
+                    if (node.title && node.title.includes('HIGH')) {{
+                        newNode.color = '#e74c3c';
+                        newNode.size = 25;
+                        newNode.borderWidth = 4;
+                    }} else {{
+                        newNode.color = '#bdc3c7';
+                        newNode.size = 10;
+                    }}
+                    nodeUpdate.push(newNode);
+                }});
+                nodes.update(nodeUpdate);
+            }}
+            
+            function showClusters() {{
+                // Group nodes by type
+                var clusters = {{}};
+                nodes.forEach(function(node) {{
+                    if (!clusters[node.group]) {{
+                        clusters[node.group] = [];
+                    }}
+                    clusters[node.group].push(node.id);
+                }});
+                
+                // Apply clustering
+                for (var clusterType in clusters) {{
+                    network.cluster({{
+                        joinCondition: function(nodeOptions) {{
+                            return nodeOptions.group === clusterType;
+                        }},
+                        clusterNodeProperties: {{
+                            id: 'cluster-' + clusterType,
+                            label: clusterType + ' Cluster',
+                            color: '#95a5a6',
+                            size: 30
+                        }}
+                    }});
+                }}
+            }}
+            
+            function exportData() {{
+                var exportData = {{
+                    entities: nodes.get(),
+                    relationships: edges.get(),
+                    generated: new Date().toISOString(),
+                    stats: {{
+                        total_entities: nodes.length,
+                        total_relationships: edges.length,
+                        crypto_types: [...new Set(nodes.get().map(n => n.group))]
+                    }}
+                }};
+                
+                var dataStr = JSON.stringify(exportData, null, 2);
+                var dataBlob = new Blob([dataStr], {{type: 'application/json'}});
+                var url = URL.createObjectURL(dataBlob);
+                var link = document.createElement('a');
+                link.href = url;
+                link.download = 'crypto_investigation_network_' + new Date().toISOString().slice(0,10) + '.json';
+                link.click();
+                URL.revokeObjectURL(url);
+                
+                alert('✅ Network data exported successfully!');
+            }}
+            
+            function showNetworkStats() {{
+                var entityTypes = {{}};
+                var linkTypes = {{}};
+                
+                nodes.forEach(function(node) {{
+                    entityTypes[node.group] = (entityTypes[node.group] || 0) + 1;
+                }});
+                
+                edges.forEach(function(edge) {{
+                    var type = edge.title ? edge.title.split(':')[0] : 'Unknown';
+                    linkTypes[type] = (linkTypes[type] || 0) + 1;
+                }});
+                
+                var stats = "📊 Network Analysis Statistics\\n\\n";
+                stats += "🔹 Total Entities: " + nodes.length + "\\n";
+                stats += "🔹 Total Relationships: " + edges.length + "\\n\\n";
+                
+                stats += "📋 Entity Type Distribution:\\n";
+                for (var type in entityTypes) {{
+                    stats += "  • " + type + ": " + entityTypes[type] + "\\n";
+                }}
+                
+                stats += "\\n🔗 Relationship Type Distribution:\\n";
+                for (var type in linkTypes) {{
+                    stats += "  • " + type + ": " + linkTypes[type] + "\\n";
+                }}
+                
+                alert(stats);
+            }}
+            
+            function showNodeDetails(node) {{
+                var details = "🔍 Entity Details\\n\\n";
+                details += "📋 ID: " + node.id + "\\n";
+                details += "🏷️ Type: " + node.group + "\\n";
+                details += "📝 Label: " + node.label + "\\n\\n";
+                details += "ℹ️ Additional Information:\\n" + (node.title || 'No additional details available');
+                
+                alert(details);
+            }}
+            
+            function showEdgeDetails(edge) {{
+                var details = "🔗 Relationship Details\\n\\n";
+                details += "📋 From: " + edge.from + "\\n";
+                details += "📋 To: " + edge.to + "\\n";
+                details += "🏷️ Label: " + (edge.label || 'Unlabeled') + "\\n\\n";
+                details += "ℹ️ Additional Information:\\n" + (edge.title || 'No additional details available');
+                
+                alert(details);
+            }}
+            
+            // Auto-fit network on load
+            network.once("stabilizationIterationsDone", function() {{
+                network.fit({{
+                    animation: {{
+                        duration: 1000,
+                        easingFunction: 'easeInOutQuad'
+                    }}
+                }});
+            }});
+            
+            // Show loading message
+            console.log('🌐 Enhanced Cryptocurrency Investigation Dashboard Loaded');
+            console.log('📊 Entities:', nodes.length, '| 🔗 Relationships:', edges.length);
+        </script>
+    </body>
+    </html>"""
+            
+            self.logger.info(f"Generated complete dashboard HTML with {len(nodes_data)} nodes and {len(edges_data)} edges")
+            return html_template
+            
+        except Exception as e:
+            self.logger.error(f"Dashboard HTML generation failed: {e}")
+            raise
+
+    def _generate_node_tooltip(self, entity) -> str:
+        """
+        Generate detailed tooltip for network nodes.
         
-        <div class="insights">
-            <h2>🚨 Key Investigative Insights</h2>
-            {''.join(f'<div class="insight {insight.severity.lower()}"><strong>{insight.title}</strong><br>{insight.description}</div>' for insight in insights[:10])}
-        </div>
+        Args:
+            entity: Entity object
+            
+        Returns:
+            str: Formatted tooltip text
+        """
+        try:
+            tooltip = f"Type: {getattr(entity, 'entity_type', 'Unknown')}\\n"
+            tooltip += f"ID: {getattr(entity, 'entity_id', 'Unknown')}\\n"
+            
+            # Add attributes if available
+            attributes = getattr(entity, 'attributes', {})
+            if attributes:
+                tooltip += "\\nAttributes:\\n"
+                for key, value in attributes.items():
+                    if key in ['Address', 'CryptoType', 'RiskLevel', 'Balance', 'BalanceUSD']:
+                        tooltip += f"• {key}: {value}\\n"
+            
+            # Add risk information
+            risk_score = getattr(entity, 'risk_score', 0)
+            if risk_score > 0:
+                tooltip += f"\\nRisk Score: {risk_score:.2f}"
+                if risk_score > 0.7:
+                    tooltip += " (HIGH RISK)"
+                elif risk_score > 0.3:
+                    tooltip += " (MEDIUM RISK)"
+                else:
+                    tooltip += " (LOW RISK)"
+            
+            return tooltip
+            
+        except Exception as e:
+            return f"Entity: {getattr(entity, 'entity_id', 'Unknown')}"
+
+    def _generate_edge_tooltip(self, link) -> str:
+        """
+        Generate detailed tooltip for network edges.
         
-        {f'''
-        <div class="clusters">
-            <h2>🎯 Risk Clusters</h2>
-            {''.join(f'<div class="cluster"><strong>{cluster.cluster_name}</strong> - {cluster.risk_level} Risk<br>Entities: {len(cluster.entities)} | Factors: {", ".join(cluster.risk_factors)}</div>' for cluster in clusters[:5])}
-        </div>
-        ''' if clusters else ''}
+        Args:
+            link: Link object
+            
+        Returns:
+            str: Formatted tooltip text
+        """
+        try:
+            tooltip = f"Type: {getattr(link, 'link_type', 'Unknown')}\\n"
+            
+            # Add attributes if available
+            attributes = getattr(link, 'attributes', {})
+            if attributes:
+                for key, value in attributes.items():
+                    if key in ['LinkType', 'Strength', 'CryptoType']:
+                        tooltip += f"• {key}: {value}\\n"
+            
+            # Add strength information
+            strength = getattr(link, 'strength', 0)
+            if strength > 0:
+                tooltip += f"\\nStrength: {strength:.2f}"
+                if strength > 0.7:
+                    tooltip += " (STRONG)"
+                elif strength > 0.3:
+                    tooltip += " (MODERATE)"
+                else:
+                    tooltip += " (WEAK)"
+            
+            return tooltip
+            
+        except Exception as e:
+            return f"Relationship: {getattr(link, 'link_type', 'Unknown')}"
+
+    def _get_entity_color(self, entity_type: str) -> str:
+        """
+        Get color for entity based on type.
         
-    </div>
-</body>
-</html>
-"""
-        return html_template
+        Args:
+            entity_type: Type of entity
+            
+        Returns:
+            str: Color hex code
+        """
+        colors = {
+            'CryptoAddress': '#FF6B6B',      # Red for crypto addresses
+            'Exchange': '#4ECDC4',           # Teal for exchanges  
+            'Cluster': '#45B7D1',            # Blue for clusters
+            'Entity': '#96CEB4',             # Green for entities
+            'Mixer': '#FFEAA7',              # Yellow for mixers
+            'Service': '#DDA0DD',            # Purple for services
+            'DarknetMarket': '#8B0000',      # Dark red for darknet
+            'Wallet': '#20B2AA'              # Light sea green for wallets
+        }
+        return colors.get(entity_type, '#95A5A6')  # Default gray
+
+    def _get_link_color(self, link_type: str) -> str:
+        """
+        Get color for link based on type.
+        
+        Args:
+            link_type: Type of link
+            
+        Returns:
+            str: Color hex code
+        """
+        colors = {
+            'SendsTo': '#E74C3C',            # Red for transactions
+            'ConnectedTo': '#3498DB',        # Blue for connections
+            'BelongsTo': '#2ECC71',          # Green for ownership
+            'SameCryptoType': '#F39C12',     # Orange for same crypto
+            'SameSource': '#9B59B6',         # Purple for same source
+            'HighRiskConnection': '#C0392B', # Dark red for high risk
+            'SharedExchange': '#16A085'      # Dark teal for shared exchange
+        }
+        return colors.get(link_type, '#7F8C8D')  # Default gray
+
+    def _calculate_node_size(self, entity) -> int:
+        """
+        Calculate node size based on entity importance.
+        
+        Args:
+            entity: Entity object
+            
+        Returns:
+            int: Node size
+        """
+        try:
+            base_size = 15
+            
+            # Increase size based on risk score
+            risk_score = getattr(entity, 'risk_score', 0)
+            risk_bonus = int(risk_score * 10)
+            
+            # Increase size based on balance if available
+            attributes = getattr(entity, 'attributes', {})
+            balance_usd = attributes.get('BalanceUSD', 0)
+            if isinstance(balance_usd, (int, float)) and balance_usd > 0:
+                if balance_usd > 100000:
+                    balance_bonus = 10
+                elif balance_usd > 10000:
+                    balance_bonus = 5
+                else:
+                    balance_bonus = 2
+            else:
+                balance_bonus = 0
+            
+            return min(base_size + risk_bonus + balance_bonus, 40)  # Cap at 40
+            
+        except Exception:
+            return 15  # Default size
+
+    def _generate_dashboard_stats(self, entities: List, links: List, insights: List) -> Dict[str, int]:
+        """
+        Generate statistics for dashboard display.
+        
+        Args:
+            entities: List of entity objects
+            links: List of link objects  
+            insights: List of insight objects
+            
+        Returns:
+            Dict[str, int]: Statistics dictionary
+        """
+        try:
+            # Count high risk entities
+            high_risk_count = 0
+            crypto_types = set()
+            sources = set()
+            
+            for entity in entities:
+                # Count high risk
+                risk_score = getattr(entity, 'risk_score', 0)
+                if risk_score > 0.7:
+                    high_risk_count += 1
+                
+                # Collect crypto types
+                attributes = getattr(entity, 'attributes', {})
+                crypto_type = attributes.get('CryptoType')
+                if crypto_type:
+                    crypto_types.add(crypto_type)
+                
+                # Collect sources
+                source = attributes.get('SourceFile')
+                if source:
+                    sources.add(source)
+            
+            # Count critical insights
+            critical_insights = 0
+            if insights:
+                critical_insights = sum(1 for insight in insights 
+                                    if getattr(insight, 'severity', '') in ['CRITICAL', 'HIGH'])
+            
+            return {
+                'total_entities': len(entities),
+                'total_relationships': len(links),
+                'critical_insights': critical_insights,
+                'high_risk_entities': high_risk_count,
+                'crypto_types': len(crypto_types),
+                'unique_sources': len(sources)
+            }
+            
+        except Exception as e:
+            self.logger.warning(f"Error generating stats: {e}")
+            return {
+                'total_entities': len(entities) if entities else 0,
+                'total_relationships': len(links) if links else 0,
+                'critical_insights': 0,
+                'high_risk_entities': 0,
+                'crypto_types': 0,
+                'unique_sources': 0
+            }
+
+    def _generate_insights_html(self, insights: List) -> str:
+        """
+        Generate HTML for insights section.
+        
+        Args:
+            insights: List of insight objects
+            
+        Returns:
+            str: HTML content for insights
+        """
+        if not insights:
+            return '<p>No investigative insights generated yet. Analysis may be ongoing.</p>'
+        
+        html = ""
+        for insight in insights[:10]:  # Show top 10 insights
+            try:
+                severity = getattr(insight, 'severity', 'MEDIUM').lower()
+                title = getattr(insight, 'finding', 'Unknown Finding')
+                description = getattr(insight, 'description', 'No description available')
+                entities = getattr(insight, 'entities', [])
+                
+                html += f'''
+                <div class="insight {severity}">
+                    <div class="insight-title">{title}</div>
+                    <div class="insight-description">{description}</div>
+                    <div class="insight-entities">Affected entities: {len(entities)} items</div>
+                </div>
+                '''
+            except Exception as e:
+                continue
+        
+        return html if html else '<p>Error displaying insights.</p>'
+
+    def _generate_clusters_html(self, clusters: List) -> str:
+        """
+        Generate HTML for clusters section.
+        
+        Args:
+            clusters: List of cluster objects
+            
+        Returns:
+            str: HTML content for clusters
+        """
+        if not clusters:
+            return '<p>No risk clusters detected. This indicates entities are operating independently.</p>'
+        
+        html = ""
+        for cluster in clusters[:5]:  # Show top 5 clusters
+            try:
+                cluster_id = getattr(cluster, 'cluster_id', 'Unknown')
+                risk_level = getattr(cluster, 'risk_level', 'MEDIUM')
+                entities = getattr(cluster, 'entities', [])
+                
+                html += f'''
+                <div class="cluster">
+                    <div class="cluster-title">Cluster {cluster_id} - {risk_level} Risk</div>
+                    <div>Contains {len(entities)} related entities</div>
+                </div>
+                '''
+            except Exception as e:
+                continue
+        
+        return html if html else '<p>Error displaying clusters.</p>'
+
+    def _generate_entity_legend(self) -> str:
+        """Generate legend for entity types."""
+        entity_types = [
+            ('CryptoAddress', '#FF6B6B'),
+            ('Exchange', '#4ECDC4'),
+            ('Cluster', '#45B7D1'),
+            ('Service', '#DDA0DD')
+        ]
+        
+        legend_html = ""
+        for entity_type, color in entity_types:
+            legend_html += f'<span class="legend-item"><span class="legend-color" style="background-color: {color};"></span>{entity_type}</span>'
+        
+        return legend_html
+
+    def _generate_relationship_legend(self) -> str:
+        """Generate legend for relationship types."""
+        relationship_types = [
+            ('Transaction', '#E74C3C'),
+            ('Connection', '#3498DB'), 
+            ('Same Type', '#F39C12'),
+            ('High Risk', '#C0392B')
+        ]
+        
+        legend_html = ""
+        for rel_type, color in relationship_types:
+            legend_html += f'<span class="legend-item"><span class="legend-color" style="background-color: {color};"></span>{rel_type}</span>'
+        
+        return legend_html
+
+
+
+
+
+
+
 
 
 def main():

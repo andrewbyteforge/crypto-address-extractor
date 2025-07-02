@@ -1,345 +1,81 @@
-"""
-Enhanced i2 Simple Test with Advanced User Controls
-==================================================
-
-File: simple_i2_test_enhanced.py
-Function: Enhanced version with advanced visualization controls
-
-This enhanced version includes:
-- Advanced physics controls
-- Multiple layout algorithms
-- Node filtering and grouping
-- Visual customization options
-- Export capabilities
-- Real-time data manipulation
-
-Author: Crypto Extractor Tool
-Date: 2025-07-01
-Version: 2.0.0 (ENHANCED)
-"""
-
-import os
-import sys
-import json
-import logging
-import webbrowser
-from datetime import datetime
-from typing import List, Dict, Any, Optional
-
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-
-def create_enhanced_test_data() -> Dict[str, Any]:
-    """
-    Create enhanced test data with more entities and relationships.
-    
-    Returns:
-        Dict[str, Any]: Enhanced test data structure
-    """
-    logger.info("Creating enhanced test data for visualization")
-    
-    # Enhanced entities with more attributes
-    entities = [
-        {
-            'id': 'btc_001',
-            'label': 'Genesis Block',
-            'type': 'CryptoAddress',
-            'crypto': 'BTC',
-            'risk_level': 'LOW',
-            'balance': 0,
-            'balance_usd': 0,
-            'transaction_count': 1,
-            'attributes': {
-                'Address': '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
-                'CryptoType': 'BTC',
-                'RiskLevel': 'LOW',
-                'Balance': '0 BTC',
-                'FirstSeen': '2009-01-03',
-                'Category': 'Historical'
-            }
-        },
-        {
-            'id': 'eth_001', 
-            'label': 'High Value Wallet',
-            'type': 'CryptoAddress',
-            'crypto': 'ETH',
-            'risk_level': 'HIGH',
-            'balance': 15.5,
-            'balance_usd': 25000,
-            'transaction_count': 156,
-            'attributes': {
-                'Address': '0x742d35Cc6639C0532fEb5001fE9C9c75A8fd8Ecd',
-                'CryptoType': 'ETH',
-                'RiskLevel': 'HIGH',
-                'Balance': '15.5 ETH',
-                'BalanceUSD': '$25,000',
-                'DarknetExposure': 'YES',
-                'Category': 'Suspicious'
-            }
-        },
-        {
-            'id': 'exchange_001',
-            'label': 'Coinbase Exchange',
-            'type': 'Exchange',
-            'crypto': 'MULTI',
-            'risk_level': 'LOW',
-            'balance': 0,
-            'balance_usd': 0,
-            'transaction_count': 50000,
-            'attributes': {
-                'Name': 'Coinbase',
-                'Type': 'Exchange',
-                'Category': 'Centralized Exchange',
-                'Country': 'USA',
-                'License': 'Regulated',
-                'RiskLevel': 'LOW'
-            }
-        },
-        {
-            'id': 'mixer_001',
-            'label': 'Privacy Mixer',
-            'type': 'Mixer',
-            'crypto': 'BTC',
-            'risk_level': 'HIGH',
-            'balance': 0,
-            'balance_usd': 0,
-            'transaction_count': 2500,
-            'attributes': {
-                'Name': 'CoinJoin Service',
-                'Type': 'Mixer',
-                'Category': 'Privacy Service',
-                'RiskLevel': 'HIGH',
-                'Purpose': 'Obfuscation'
-            }
-        },
-        {
-            'id': 'wallet_001',
-            'label': 'Cold Storage',
-            'type': 'Wallet',
-            'crypto': 'BTC',
-            'risk_level': 'LOW',
-            'balance': 100.5,
-            'balance_usd': 5000000,
-            'transaction_count': 5,
-            'attributes': {
-                'Address': 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
-                'Type': 'Cold Storage',
-                'Category': 'Institutional',
-                'RiskLevel': 'LOW',
-                'Balance': '100.5 BTC'
-            }
-        },
-        {
-            'id': 'defi_001',
-            'label': 'DeFi Protocol',
-            'type': 'Service',
-            'crypto': 'ETH',
-            'risk_level': 'MEDIUM',
-            'balance': 0,
-            'balance_usd': 0,
-            'transaction_count': 15000,
-            'attributes': {
-                'Name': 'Uniswap V3',
-                'Type': 'DeFi Protocol',
-                'Category': 'Decentralized Exchange',
-                'RiskLevel': 'MEDIUM',
-                'TVL': '$2.1B'
-            }
-        }
-    ]
-    
-    # Enhanced relationships
-    links = [
-        {
-            'id': 'link_001',
-            'from': 'btc_001',
-            'to': 'exchange_001',
-            'type': 'UsesService',
-            'label': 'Historical Transfer',
-            'strength': 0.3,
-            'attributes': {
-                'Type': 'UsesService',
-                'Amount': '50 BTC',
-                'Date': '2010-05-22',
-                'Purpose': 'First Commercial Transaction'
-            }
-        },
-        {
-            'id': 'link_002',
-            'from': 'eth_001',
-            'to': 'mixer_001',
-            'type': 'SuspiciousActivity',
-            'label': 'Privacy Transaction',
-            'strength': 0.8,
-            'attributes': {
-                'Type': 'SuspiciousActivity',
-                'Amount': '5.2 ETH',
-                'RiskScore': '0.85',
-                'Flags': 'Money Laundering Risk'
-            }
-        },
-        {
-            'id': 'link_003',
-            'from': 'wallet_001',
-            'to': 'exchange_001',
-            'type': 'SendsTo',
-            'label': 'Large Transfer',
-            'strength': 0.6,
-            'attributes': {
-                'Type': 'SendsTo',
-                'Amount': '10.5 BTC',
-                'Purpose': 'Liquidation',
-                'Frequency': 'Quarterly'
-            }
-        },
-        {
-            'id': 'link_004',
-            'from': 'eth_001',
-            'to': 'defi_001',
-            'type': 'ConnectedTo',
-            'label': 'DeFi Interaction',
-            'strength': 0.4,
-            'attributes': {
-                'Type': 'ConnectedTo',
-                'Activity': 'Liquidity Provision',
-                'Frequency': 'Weekly',
-                'Value': 'High'
-            }
-        },
-        {
-            'id': 'link_005',
-            'from': 'mixer_001',
-            'to': 'exchange_001',
-            'type': 'SuspiciousActivity',
-            'label': 'Exit Transaction',
-            'strength': 0.9,
-            'attributes': {
-                'Type': 'SuspiciousActivity',
-                'Amount': 'Variable',
-                'Pattern': 'Structured Deposits',
-                'Alert': 'AML Review Required'
-            }
-        }
-    ]
-    
-    # Summary statistics
-    summary = {
-        'total_entities': len(entities),
-        'total_links': len(links),
-        'addresses_found': len([e for e in entities if e['type'] == 'CryptoAddress']),
-        'crypto_types': len(set(e['crypto'] for e in entities if e['crypto'] != 'MULTI')),
-        'high_risk_count': len([e for e in entities if e['risk_level'] == 'HIGH']),
-        'total_value_usd': sum(e['balance_usd'] for e in entities)
-    }
-    
-    return {
-        'entities': entities,
-        'links': links,
-        'summary': summary
-    }
-
-
-def generate_enhanced_test_visualization(test_data: Dict[str, Any]) -> str:
-    """
-    Generate enhanced HTML visualization with advanced controls.
-    
-    Args:
-        test_data: Test data dictionary
-        
-    Returns:
-        str: Path to generated HTML file
-        
-    Raises:
-        Exception: If HTML generation fails
-    """
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    html_path = f"enhanced_i2_visualization_{timestamp}.html"
-    
-    entities = test_data['entities']
-    links = test_data['links']
-    summary = test_data['summary']
-    
-    html_content = f'''<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <title>Enhanced i2 Network Visualization</title>
     <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <style>
-        body {{ 
+        body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             margin: 0; 
             padding: 15px; 
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-        }}
-        .container {{
+        }
+        .container {
             max-width: 1600px;
             margin: 0 auto;
             background: rgba(255,255,255,0.95);
             border-radius: 12px;
             padding: 20px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-        }}
-        .header {{ 
+        }
+        .header { 
             background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); 
             color: white; 
             padding: 20px; 
             border-radius: 10px; 
             margin-bottom: 20px; 
             text-align: center;
-        }}
-        .stats {{ 
+        }
+        .stats { 
             display: grid; 
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
             gap: 15px; 
             margin-bottom: 20px; 
-        }}
-        .stat-card {{ 
+        }
+        .stat-card { 
             background: white; 
             padding: 15px; 
             border-radius: 8px; 
             box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
             text-align: center;
             border-left: 4px solid #3498db;
-        }}
-        .stat-number {{ 
+        }
+        .stat-number { 
             font-size: 2em; 
             font-weight: bold; 
             color: #2c3e50; 
             margin-bottom: 5px;
-        }}
-        .stat-label {{ 
+        }
+        .stat-label { 
             color: #7f8c8d; 
             font-size: 0.9em;
             text-transform: uppercase;
-        }}
-        .controls-section {{
+        }
+        .controls-section {
             background: white;
             padding: 20px;
             border-radius: 10px;
             margin-bottom: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }}
-        .controls-grid {{
+        }
+        .controls-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
-        }}
-        .control-group {{
+        }
+        .control-group {
             background: #f8f9fa;
             padding: 15px;
             border-radius: 8px;
             border-left: 3px solid #3498db;
-        }}
-        .control-group h4 {{
+        }
+        .control-group h4 {
             margin: 0 0 10px 0;
             color: #2c3e50;
             font-size: 1em;
-        }}
-        button {{ 
+        }
+        button { 
             background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); 
             color: white; 
             border: none; 
@@ -350,78 +86,78 @@ def generate_enhanced_test_visualization(test_data: Dict[str, Any]) -> str:
             font-size: 0.9em;
             transition: all 0.3s;
             min-width: 80px;
-        }}
-        button:hover {{ 
+        }
+        button:hover { 
             transform: translateY(-1px);
             box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
-        }}
-        button.active {{
+        }
+        button.active {
             background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-        }}
-        button.danger {{
+        }
+        button.danger {
             background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-        }}
-        select, input[type="range"] {{
+        }
+        select, input[type="range"] {
             width: 100%;
             padding: 5px;
             margin: 5px 0;
             border: 1px solid #ddd;
             border-radius: 4px;
-        }}
-        .slider-container {{
+        }
+        .slider-container {
             margin: 10px 0;
-        }}
-        .slider-label {{
+        }
+        .slider-label {
             display: flex;
             justify-content: space-between;
             font-size: 0.8em;
             color: #666;
             margin-bottom: 5px;
-        }}
-        #network {{ 
+        }
+        #network { 
             width: 100%; 
             height: 600px; 
             background: white; 
             border-radius: 10px; 
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             border: 2px solid #ecf0f1;
-        }}
-        .info-panel {{ 
+        }
+        .info-panel { 
             background: white; 
             padding: 20px; 
             border-radius: 10px; 
             margin-top: 20px; 
             box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
-        }}
-        .legend {{
+        }
+        .legend {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
             margin-top: 15px;
-        }}
-        .legend-section {{
+        }
+        .legend-section {
             background: #f8f9fa;
             padding: 15px;
             border-radius: 8px;
-        }}
-        .legend-item {{ 
+        }
+        .legend-item { 
             display: flex;
             align-items: center;
             margin: 5px 0;
             font-size: 0.9em;
-        }}
-        .legend-color {{ 
+        }
+        .legend-color { 
             width: 16px; 
             height: 16px; 
             border-radius: 50%;
             margin-right: 8px; 
             border: 1px solid #ddd;
-        }}
-        .filter-active {{
+        }
+        .filter-active {
             border: 2px solid #f39c12 !important;
             background: #fef9e7 !important;
-        }}
-        .status-bar {{
+        }
+        .status-bar {
             position: fixed;
             bottom: 20px;
             right: 20px;
@@ -431,7 +167,7 @@ def generate_enhanced_test_visualization(test_data: Dict[str, Any]) -> str:
             border-radius: 20px;
             font-size: 0.9em;
             z-index: 1000;
-        }}
+        }
     </style>
 </head>
 <body>
@@ -443,28 +179,28 @@ def generate_enhanced_test_visualization(test_data: Dict[str, Any]) -> str:
         <div class="header">
             <h1>🔍 Enhanced i2 Network Visualization</h1>
             <p><strong>Advanced Cryptocurrency Investigation Tool</strong></p>
-            <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | Entities: {summary['total_entities']} | Relationships: {summary['total_links']}</p>
+            <p>Generated: 2025-07-02 11:54:50 | Entities: 6 | Relationships: 5</p>
         </div>
         
         <div class="stats">
             <div class="stat-card">
-                <div class="stat-number">{summary['total_entities']}</div>
+                <div class="stat-number">6</div>
                 <div class="stat-label">Total Entities</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">{summary['total_links']}</div>
+                <div class="stat-number">5</div>
                 <div class="stat-label">Relationships</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">{summary['addresses_found']}</div>
+                <div class="stat-number">2</div>
                 <div class="stat-label">Crypto Addresses</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">{summary['high_risk_count']}</div>
+                <div class="stat-number">2</div>
                 <div class="stat-label">High Risk</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">${summary['total_value_usd']:,}</div>
+                <div class="stat-number">$5,025,000</div>
                 <div class="stat-label">Total Value USD</div>
             </div>
         </div>
@@ -583,89 +319,267 @@ def generate_enhanced_test_visualization(test_data: Dict[str, Any]) -> str:
 
     <script type="text/javascript">
         // Initialize network data
-        var originalNodes = new vis.DataSet({json.dumps(entities, indent=2)});
-        var originalEdges = new vis.DataSet({json.dumps(links, indent=2)});
+        var originalNodes = new vis.DataSet([
+  {
+    "id": "btc_001",
+    "label": "Genesis Block",
+    "type": "CryptoAddress",
+    "crypto": "BTC",
+    "risk_level": "LOW",
+    "balance": 0,
+    "balance_usd": 0,
+    "transaction_count": 1,
+    "attributes": {
+      "Address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+      "CryptoType": "BTC",
+      "RiskLevel": "LOW",
+      "Balance": "0 BTC",
+      "FirstSeen": "2009-01-03",
+      "Category": "Historical"
+    }
+  },
+  {
+    "id": "eth_001",
+    "label": "High Value Wallet",
+    "type": "CryptoAddress",
+    "crypto": "ETH",
+    "risk_level": "HIGH",
+    "balance": 15.5,
+    "balance_usd": 25000,
+    "transaction_count": 156,
+    "attributes": {
+      "Address": "0x742d35Cc6639C0532fEb5001fE9C9c75A8fd8Ecd",
+      "CryptoType": "ETH",
+      "RiskLevel": "HIGH",
+      "Balance": "15.5 ETH",
+      "BalanceUSD": "$25,000",
+      "DarknetExposure": "YES",
+      "Category": "Suspicious"
+    }
+  },
+  {
+    "id": "exchange_001",
+    "label": "Coinbase Exchange",
+    "type": "Exchange",
+    "crypto": "MULTI",
+    "risk_level": "LOW",
+    "balance": 0,
+    "balance_usd": 0,
+    "transaction_count": 50000,
+    "attributes": {
+      "Name": "Coinbase",
+      "Type": "Exchange",
+      "Category": "Centralized Exchange",
+      "Country": "USA",
+      "License": "Regulated",
+      "RiskLevel": "LOW"
+    }
+  },
+  {
+    "id": "mixer_001",
+    "label": "Privacy Mixer",
+    "type": "Mixer",
+    "crypto": "BTC",
+    "risk_level": "HIGH",
+    "balance": 0,
+    "balance_usd": 0,
+    "transaction_count": 2500,
+    "attributes": {
+      "Name": "CoinJoin Service",
+      "Type": "Mixer",
+      "Category": "Privacy Service",
+      "RiskLevel": "HIGH",
+      "Purpose": "Obfuscation"
+    }
+  },
+  {
+    "id": "wallet_001",
+    "label": "Cold Storage",
+    "type": "Wallet",
+    "crypto": "BTC",
+    "risk_level": "LOW",
+    "balance": 100.5,
+    "balance_usd": 5000000,
+    "transaction_count": 5,
+    "attributes": {
+      "Address": "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
+      "Type": "Cold Storage",
+      "Category": "Institutional",
+      "RiskLevel": "LOW",
+      "Balance": "100.5 BTC"
+    }
+  },
+  {
+    "id": "defi_001",
+    "label": "DeFi Protocol",
+    "type": "Service",
+    "crypto": "ETH",
+    "risk_level": "MEDIUM",
+    "balance": 0,
+    "balance_usd": 0,
+    "transaction_count": 15000,
+    "attributes": {
+      "Name": "Uniswap V3",
+      "Type": "DeFi Protocol",
+      "Category": "Decentralized Exchange",
+      "RiskLevel": "MEDIUM",
+      "TVL": "$2.1B"
+    }
+  }
+]);
+        var originalEdges = new vis.DataSet([
+  {
+    "id": "link_001",
+    "from": "btc_001",
+    "to": "exchange_001",
+    "type": "UsesService",
+    "label": "Historical Transfer",
+    "strength": 0.3,
+    "attributes": {
+      "Type": "UsesService",
+      "Amount": "50 BTC",
+      "Date": "2010-05-22",
+      "Purpose": "First Commercial Transaction"
+    }
+  },
+  {
+    "id": "link_002",
+    "from": "eth_001",
+    "to": "mixer_001",
+    "type": "SuspiciousActivity",
+    "label": "Privacy Transaction",
+    "strength": 0.8,
+    "attributes": {
+      "Type": "SuspiciousActivity",
+      "Amount": "5.2 ETH",
+      "RiskScore": "0.85",
+      "Flags": "Money Laundering Risk"
+    }
+  },
+  {
+    "id": "link_003",
+    "from": "wallet_001",
+    "to": "exchange_001",
+    "type": "SendsTo",
+    "label": "Large Transfer",
+    "strength": 0.6,
+    "attributes": {
+      "Type": "SendsTo",
+      "Amount": "10.5 BTC",
+      "Purpose": "Liquidation",
+      "Frequency": "Quarterly"
+    }
+  },
+  {
+    "id": "link_004",
+    "from": "eth_001",
+    "to": "defi_001",
+    "type": "ConnectedTo",
+    "label": "DeFi Interaction",
+    "strength": 0.4,
+    "attributes": {
+      "Type": "ConnectedTo",
+      "Activity": "Liquidity Provision",
+      "Frequency": "Weekly",
+      "Value": "High"
+    }
+  },
+  {
+    "id": "link_005",
+    "from": "mixer_001",
+    "to": "exchange_001",
+    "type": "SuspiciousActivity",
+    "label": "Exit Transaction",
+    "strength": 0.9,
+    "attributes": {
+      "Type": "SuspiciousActivity",
+      "Amount": "Variable",
+      "Pattern": "Structured Deposits",
+      "Alert": "AML Review Required"
+    }
+  }
+]);
         var nodes = new vis.DataSet(originalNodes.get());
         var edges = new vis.DataSet(originalEdges.get());
-        var data = {{ nodes: nodes, edges: edges }};
+        var data = { nodes: nodes, edges: edges };
         
         // Advanced network options
-        var options = {{
-            nodes: {{
+        var options = {
+            nodes: {
                 shape: 'dot',
                 size: 20,
-                font: {{ 
+                font: { 
                     size: 12, 
                     color: '#2c3e50',
                     strokeWidth: 2,
                     strokeColor: '#ffffff'
-                }},
+                },
                 borderWidth: 2,
-                shadow: {{
+                shadow: {
                     enabled: true,
                     color: 'rgba(0,0,0,0.2)',
                     size: 8,
                     x: 2,
                     y: 2
-                }},
-                chosen: {{
-                    node: function(values, id, selected, hovering) {{
+                },
+                chosen: {
+                    node: function(values, id, selected, hovering) {
                         values.shadow = true;
                         values.shadowSize = 15;
                         values.shadowColor = 'rgba(0,0,0,0.4)';
-                    }}
-                }}
-            }},
-            edges: {{
+                    }
+                }
+            },
+            edges: {
                 width: 2,
-                shadow: {{
+                shadow: {
                     enabled: true,
                     color: 'rgba(0,0,0,0.1)',
                     size: 3
-                }},
-                smooth: {{ 
+                },
+                smooth: { 
                     type: 'continuous',
                     forceDirection: 'none',
                     roundness: 0.5
-                }},
-                arrows: {{ 
-                    to: {{ 
+                },
+                arrows: { 
+                    to: { 
                         enabled: true, 
                         scaleFactor: 0.6,
                         type: 'arrow'
-                    }} 
-                }},
-                chosen: {{
-                    edge: function(values, id, selected, hovering) {{
+                    } 
+                },
+                chosen: {
+                    edge: function(values, id, selected, hovering) {
                         values.width = values.width * 1.5;
                         values.shadow = true;
-                    }}
-                }}
-            }},
-            physics: {{
+                    }
+                }
+            },
+            physics: {
                 enabled: true,
-                stabilization: {{ iterations: 200 }},
-                barnesHut: {{ 
+                stabilization: { iterations: 200 },
+                barnesHut: { 
                     gravitationalConstant: -3000, 
                     springConstant: 0.004, 
                     springLength: 150,
                     damping: 0.1
-                }},
+                },
                 maxVelocity: 30,
                 minVelocity: 0.1
-            }},
-            interaction: {{
+            },
+            interaction: {
                 hover: true,
                 tooltipDelay: 200,
                 hideEdgesOnDrag: true,
                 multiselect: true,
                 selectConnectedEdges: false
-            }},
-            layout: {{
+            },
+            layout: {
                 improvedLayout: true,
                 clusterThreshold: 150
-            }}
-        }};
+            }
+        };
         
         // Create network instance
         var container = document.getElementById('network');
@@ -679,113 +593,113 @@ def generate_enhanced_test_visualization(test_data: Dict[str, Any]) -> str:
         var selectedNodes = [];
         
         // Color mapping functions
-        function getNodeColor(node) {{
-            const typeColors = {{
+        function getNodeColor(node) {
+            const typeColors = {
                 'CryptoAddress': '#FF6B6B',
                 'Exchange': '#4ECDC4',
                 'Wallet': '#45B7D1',
                 'Service': '#96CEB4',
                 'Mixer': '#FFEAA7'
-            }};
+            };
             
-            const riskColors = {{
+            const riskColors = {
                 'HIGH': '#e74c3c',
                 'MEDIUM': '#f39c12',
                 'LOW': '#27ae60'
-            }};
+            };
             
             // Color by risk if available, otherwise by type
             return riskColors[node.risk_level] || typeColors[node.type] || '#95A5A6';
-        }}
+        }
         
-        function getEdgeColor(edge) {{
-            const typeColors = {{
+        function getEdgeColor(edge) {
+            const typeColors = {
                 'SuspiciousActivity': '#E74C3C',
                 'SendsTo': '#3498DB',
                 'UsesService': '#2ECC71',
                 'ConnectedTo': '#9B59B6'
-            }};
+            };
             return typeColors[edge.type] || '#7F8C8D';
-        }}
+        }
         
         // Apply colors to nodes and edges
-        function applyColors() {{
-            var nodeUpdate = nodes.map(function(node) {{
-                return {{
+        function applyColors() {
+            var nodeUpdate = nodes.map(function(node) {
+                return {
                     ...node,
-                    color: {{
+                    color: {
                         background: getNodeColor(node),
                         border: node.risk_level === 'HIGH' ? '#c0392b' : '#2c3e50'
-                    }}
-                }};
-            }});
+                    }
+                };
+            });
             nodes.update(nodeUpdate);
             
-            var edgeUpdate = edges.map(function(edge) {{
-                return {{
+            var edgeUpdate = edges.map(function(edge) {
+                return {
                     ...edge,
                     color: getEdgeColor(edge)
-                }};
-            }});
+                };
+            });
             edges.update(edgeUpdate);
-        }}
+        }
         
         // Event Handlers
-        network.on("click", function (params) {{
-            if (params.nodes.length > 0) {{
+        network.on("click", function (params) {
+            if (params.nodes.length > 0) {
                 var nodeId = params.nodes[0];
                 var node = nodes.get(nodeId);
                 showNodeDetails(node);
-            }} else if (params.edges.length > 0) {{
+            } else if (params.edges.length > 0) {
                 var edgeId = params.edges[0];
                 var edge = edges.get(edgeId);
                 showEdgeDetails(edge);
-            }}
-        }});
+            }
+        });
         
-        network.on("selectNode", function(params) {{
+        network.on("selectNode", function(params) {
             selectedNodes = params.nodes;
             updateStatus(selectedNodes.length + " node(s) selected");
-        }});
+        });
         
-        network.on("deselectNode", function(params) {{
+        network.on("deselectNode", function(params) {
             selectedNodes = network.getSelectedNodes();
             updateStatus(selectedNodes.length + " node(s) selected");
-        }});
+        });
         
-        network.on("hoverNode", function(params) {{
+        network.on("hoverNode", function(params) {
             container.style.cursor = 'pointer';
             var node = nodes.get(params.node);
             updateStatus("Hovering: " + node.label);
-        }});
+        });
         
-        network.on("blurNode", function(params) {{
+        network.on("blurNode", function(params) {
             container.style.cursor = 'default';
             updateStatus("🟢 Network Active");
-        }});
+        });
         
         // View Control Functions
-        function zoomIn() {{
+        function zoomIn() {
             var scale = network.getScale();
-            network.moveTo({{ scale: scale * 1.3 }});
-        }}
+            network.moveTo({ scale: scale * 1.3 });
+        }
         
-        function zoomOut() {{
+        function zoomOut() {
             var scale = network.getScale();
-            network.moveTo({{ scale: scale * 0.7 }});
-        }}
+            network.moveTo({ scale: scale * 0.7 });
+        }
         
-        function resetView() {{
-            network.fit({{
-                animation: {{
+        function resetView() {
+            network.fit({
+                animation: {
                     duration: 1000,
                     easingFunction: 'easeInOutQuad'
-                }}
-            }});
-        }}
+                }
+            });
+        }
         
         // Physics Control Functions
-        function togglePhysics() {{
+        function togglePhysics() {
             physicsEnabled = !physicsEnabled;
             options.physics.enabled = physicsEnabled;
             network.setOptions(options);
@@ -794,26 +708,26 @@ def generate_enhanced_test_visualization(test_data: Dict[str, Any]) -> str:
             btn.className = physicsEnabled ? '' : 'active';
             btn.innerHTML = physicsEnabled ? '⏸️ Stop Physics' : '▶️ Start Physics';
             updateStatus('Physics ' + (physicsEnabled ? 'enabled' : 'disabled'));
-        }}
+        }
         
-        function changePhysics() {{
+        function changePhysics() {
             var type = document.getElementById('physicsType').value;
             
-            switch(type) {{
+            switch(type) {
                 case 'barnesHut':
                     options.physics.solver = 'barnesHut';
-                    options.physics.barnesHut = {{
+                    options.physics.barnesHut = {
                         gravitationalConstant: -3000,
                         springConstant: 0.004,
                         springLength: 150
-                    }};
+                    };
                     break;
                 case 'repulsion':
                     options.physics.solver = 'repulsion';
-                    options.physics.repulsion = {{
+                    options.physics.repulsion = {
                         nodeDistance: 200,
                         springLength: 200
-                    }};
+                    };
                     break;
                 case 'hierarchicalRepulsion':
                     options.physics.solver = 'hierarchicalRepulsion';
@@ -821,98 +735,98 @@ def generate_enhanced_test_visualization(test_data: Dict[str, Any]) -> str:
                 case 'forceAtlas2Based':
                     options.physics.solver = 'forceAtlas2Based';
                     break;
-            }}
+            }
             
             network.setOptions(options);
             updateStatus('Physics changed to: ' + type);
-        }}
+        }
         
-        function updateGravity(value) {{
+        function updateGravity(value) {
             document.getElementById('gravityValue').textContent = value;
             options.physics.barnesHut.gravitationalConstant = parseInt(value);
             network.setOptions(options);
-        }}
+        }
         
         // Layout Functions
-        function applyHierarchicalLayout() {{
-            options.layout = {{
-                hierarchical: {{
+        function applyHierarchicalLayout() {
+            options.layout = {
+                hierarchical: {
                     enabled: true,
                     direction: 'UD',
                     sortMethod: 'directed',
                     nodeSpacing: 200,
                     levelSeparation: 150
-                }}
-            }};
+                }
+            };
             network.setOptions(options);
             updateStatus('Applied hierarchical layout');
-        }}
+        }
         
-        function applyCircularLayout() {{
-            var positions = {{}};
+        function applyCircularLayout() {
+            var positions = {};
             var nodeIds = nodes.getIds();
             var angleStep = (2 * Math.PI) / nodeIds.length;
             var radius = 300;
             
-            nodeIds.forEach(function(id, index) {{
+            nodeIds.forEach(function(id, index) {
                 var angle = index * angleStep;
-                positions[id] = {{
+                positions[id] = {
                     x: radius * Math.cos(angle),
                     y: radius * Math.sin(angle)
-                }};
-            }});
+                };
+            });
             
             network.setPositions(positions);
             updateStatus('Applied circular layout');
-        }}
+        }
         
-        function applyRandomLayout() {{
-            var positions = {{}};
+        function applyRandomLayout() {
+            var positions = {};
             var nodeIds = nodes.getIds();
             
-            nodeIds.forEach(function(id) {{
-                positions[id] = {{
+            nodeIds.forEach(function(id) {
+                positions[id] = {
                     x: (Math.random() - 0.5) * 1000,
                     y: (Math.random() - 0.5) * 1000
-                }};
-            }});
+                };
+            });
             
             network.setPositions(positions);
             updateStatus('Applied random layout');
-        }}
+        }
         
-        function clusterByType() {{
+        function clusterByType() {
             // Clear existing clusters
             network.setData(data);
             
             var nodeTypes = [...new Set(originalNodes.get().map(n => n.type))];
             
-            nodeTypes.forEach(function(type) {{
-                network.cluster({{
-                    joinCondition: function(nodeOptions) {{
+            nodeTypes.forEach(function(type) {
+                network.cluster({
+                    joinCondition: function(nodeOptions) {
                         return nodeOptions.type === type;
-                    }},
-                    clusterNodeProperties: {{
+                    },
+                    clusterNodeProperties: {
                         id: 'cluster-' + type,
                         label: type + ' Cluster',
-                        color: getNodeColor({{type: type}}),
+                        color: getNodeColor({type: type}),
                         size: 40,
                         borderWidth: 3
-                    }}
-                }});
-            }});
+                    }
+                });
+            });
             
             updateStatus('Clustered by entity type');
-        }}
+        }
         
         // Filter Functions
-        function filterHighRisk() {{
+        function filterHighRisk() {
             var btn = document.getElementById('riskFilter');
             
-            if (currentFilter === 'risk') {{
+            if (currentFilter === 'risk') {
                 clearFilters();
                 return;
-            }}
+            }
             
             var filteredNodes = originalNodes.get().filter(n => n.risk_level === 'HIGH');
             var filteredNodeIds = filteredNodes.map(n => n.id);
@@ -928,9 +842,9 @@ def generate_enhanced_test_visualization(test_data: Dict[str, Any]) -> str:
             currentFilter = 'risk';
             btn.className = 'active';
             updateStatus('Showing only high risk entities');
-        }}
+        }
         
-        function filterByType(type) {{
+        function filterByType(type) {
             var filteredNodes = originalNodes.get().filter(n => n.type === type);
             var filteredNodeIds = filteredNodes.map(n => n.id);
             var filteredEdges = originalEdges.get().filter(e => 
@@ -944,9 +858,9 @@ def generate_enhanced_test_visualization(test_data: Dict[str, Any]) -> str:
             
             currentFilter = type;
             updateStatus('Showing only: ' + type);
-        }}
+        }
         
-        function clearFilters() {{
+        function clearFilters() {
             nodes.clear();
             edges.clear();
             nodes.add(originalNodes.get());
@@ -956,10 +870,10 @@ def generate_enhanced_test_visualization(test_data: Dict[str, Any]) -> str:
             document.getElementById('riskFilter').className = '';
             applyColors();
             updateStatus('Filters cleared');
-        }}
+        }
         
         // Visual Control Functions
-        function toggleLabels() {{
+        function toggleLabels() {
             labelsVisible = !labelsVisible;
             var btn = document.getElementById('labelsBtn');
             
@@ -969,66 +883,66 @@ def generate_enhanced_test_visualization(test_data: Dict[str, Any]) -> str:
             btn.className = labelsVisible ? '' : 'active';
             btn.innerHTML = labelsVisible ? '🏷️ Hide Labels' : '🏷️ Show Labels';
             updateStatus('Labels ' + (labelsVisible ? 'shown' : 'hidden'));
-        }}
+        }
         
-        function toggleEdges() {{
+        function toggleEdges() {
             edgesVisible = !edgesVisible;
             var btn = document.getElementById('edgesBtn');
             
-            if (edgesVisible) {{
+            if (edgesVisible) {
                 edges.clear();
                 edges.add(originalEdges.get());
-            }} else {{
+            } else {
                 edges.clear();
-            }}
+            }
             
             btn.className = edgesVisible ? '' : 'active';
             btn.innerHTML = edgesVisible ? '🔗 Hide Edges' : '🔗 Show Edges';
             updateStatus('Edges ' + (edgesVisible ? 'shown' : 'hidden'));
-        }}
+        }
         
-        function highlightConnections() {{
-            if (selectedNodes.length === 0) {{
+        function highlightConnections() {
+            if (selectedNodes.length === 0) {
                 alert('Please select a node first');
                 return;
-            }}
+            }
             
             var connectedNodes = new Set();
             var connectedEdges = new Set();
             
-            selectedNodes.forEach(function(nodeId) {{
+            selectedNodes.forEach(function(nodeId) {
                 var connectedNodeIds = network.getConnectedNodes(nodeId);
                 var connectedEdgeIds = network.getConnectedEdges(nodeId);
                 
                 connectedNodeIds.forEach(id => connectedNodes.add(id));
                 connectedEdgeIds.forEach(id => connectedEdges.add(id));
-            }});
+            });
             
             // Highlight connected nodes
-            var nodeUpdate = nodes.map(function(node) {{
+            var nodeUpdate = nodes.map(function(node) {
                 var isConnected = connectedNodes.has(node.id) || selectedNodes.includes(node.id);
-                return {{
+                return {
                     ...node,
-                    color: {{
+                    color: {
                         background: isConnected ? getNodeColor(node) : '#bdc3c7',
                         border: isConnected ? '#2c3e50' : '#95a5a6'
-                    }},
+                    },
                     size: isConnected ? 25 : 15
-                }};
-            }});
+                };
+            });
             nodes.update(nodeUpdate);
             
             updateStatus('Highlighted connections for ' + selectedNodes.length + ' node(s)');
-        }}
+        }
         
-        function changeNodeSize() {{
+        function changeNodeSize() {
             var sizeType = document.getElementById('nodeSize').value;
             var nodeUpdate = [];
             
-            originalNodes.get().forEach(function(node) {{
+            originalNodes.get().forEach(function(node) {
                 var size = 20; // default
                 
-                switch(sizeType) {{
+                switch(sizeType) {
                     case 'risk':
                         size = node.risk_level === 'HIGH' ? 30 : 
                                node.risk_level === 'MEDIUM' ? 25 : 20;
@@ -1040,103 +954,103 @@ def generate_enhanced_test_visualization(test_data: Dict[str, Any]) -> str:
                         var connections = network.getConnectedNodes(node.id).length;
                         size = 15 + (connections * 3);
                         break;
-                }}
+                }
                 
-                nodeUpdate.push({{ ...node, size: size }});
-            }});
+                nodeUpdate.push({ ...node, size: size });
+            });
             
             nodes.update(nodeUpdate);
             updateStatus('Node size changed to: ' + sizeType);
-        }}
+        }
         
         // Analysis Functions
-        function showNetworkStats() {{
-            var nodesByType = {{}};
-            var edgesByType = {{}};
-            var riskDistribution = {{}};
+        function showNetworkStats() {
+            var nodesByType = {};
+            var edgesByType = {};
+            var riskDistribution = {};
             
-            originalNodes.get().forEach(function(node) {{
+            originalNodes.get().forEach(function(node) {
                 nodesByType[node.type] = (nodesByType[node.type] || 0) + 1;
                 riskDistribution[node.risk_level] = (riskDistribution[node.risk_level] || 0) + 1;
-            }});
+            });
             
-            originalEdges.get().forEach(function(edge) {{
+            originalEdges.get().forEach(function(edge) {
                 edgesByType[edge.type] = (edgesByType[edge.type] || 0) + 1;
-            }});
+            });
             
-            var stats = "📊 Network Analysis Statistics\\n\\n";
-            stats += "🔹 Total Entities: " + originalNodes.length + "\\n";
-            stats += "🔹 Total Relationships: " + originalEdges.length + "\\n";
-            stats += "🔹 Network Density: " + (originalEdges.length / (originalNodes.length * (originalNodes.length - 1)) * 100).toFixed(2) + "%\\n\\n";
+            var stats = "📊 Network Analysis Statistics\n\n";
+            stats += "🔹 Total Entities: " + originalNodes.length + "\n";
+            stats += "🔹 Total Relationships: " + originalEdges.length + "\n";
+            stats += "🔹 Network Density: " + (originalEdges.length / (originalNodes.length * (originalNodes.length - 1)) * 100).toFixed(2) + "%\n\n";
             
-            stats += "📋 Entity Types:\\n";
-            for (var type in nodesByType) {{
-                stats += "  • " + type + ": " + nodesByType[type] + "\\n";
-            }}
+            stats += "📋 Entity Types:\n";
+            for (var type in nodesByType) {
+                stats += "  • " + type + ": " + nodesByType[type] + "\n";
+            }
             
-            stats += "\\n⚠️ Risk Distribution:\\n";
-            for (var risk in riskDistribution) {{
-                stats += "  • " + risk + ": " + riskDistribution[risk] + "\\n";
-            }}
+            stats += "\n⚠️ Risk Distribution:\n";
+            for (var risk in riskDistribution) {
+                stats += "  • " + risk + ": " + riskDistribution[risk] + "\n";
+            }
             
-            stats += "\\n🔗 Relationship Types:\\n";
-            for (var type in edgesByType) {{
-                stats += "  • " + type + ": " + edgesByType[type] + "\\n";
-            }}
+            stats += "\n🔗 Relationship Types:\n";
+            for (var type in edgesByType) {
+                stats += "  • " + type + ": " + edgesByType[type] + "\n";
+            }
             
             alert(stats);
-        }}
+        }
         
-        function findShortestPath() {{
-            if (selectedNodes.length !== 2) {{
+        function findShortestPath() {
+            if (selectedNodes.length !== 2) {
                 alert('Please select exactly 2 nodes to find shortest path');
                 return;
-            }}
+            }
             
             var path = network.findNode(selectedNodes[0]);
             // This is a simplified version - real shortest path would need graph algorithms
-            alert('Shortest path analysis between selected nodes:\\n\\nThis feature would implement Dijkstra\\'s algorithm or similar graph traversal methods to find optimal paths through the network.');
-        }}
+            alert('Shortest path analysis between selected nodes:\n\nThis feature would implement Dijkstra\'s algorithm or similar graph traversal methods to find optimal paths through the network.');
+        }
         
-        function detectCommunities() {{
+        function detectCommunities() {
             // Simplified community detection
-            var communities = {{}};
+            var communities = {};
             var communityId = 0;
             
-            originalNodes.get().forEach(function(node) {{
-                if (!communities[node.type]) {{
+            originalNodes.get().forEach(function(node) {
+                if (!communities[node.type]) {
                     communities[node.type] = communityId++;
-                }}
-            }});
+                }
+            });
             
-            var result = "👥 Community Detection Results:\\n\\n";
-            for (var type in communities) {{
-                result += "Community " + communities[type] + ": " + type + " entities\\n";
-            }}
+            var result = "👥 Community Detection Results:\n\n";
+            for (var type in communities) {
+                result += "Community " + communities[type] + ": " + type + " entities\n";
+            }
             
             alert(result);
-        }}
+        }
         
-        function exportAdvanced() {{
-            var exportData = {{
-                metadata: {{
+        function exportAdvanced() {
+            var exportData = {
+                metadata: {
                     exported: new Date().toISOString(),
                     total_nodes: originalNodes.length,
                     total_edges: originalEdges.length,
                     current_filter: currentFilter,
                     physics_enabled: physicsEnabled
-                }},
+                },
                 nodes: originalNodes.get(),
                 edges: originalEdges.get(),
                 positions: network.getPositions(),
-                view_state: {{
+                view_state: {
                     scale: network.getScale(),
                     position: network.getViewPosition()
-                }}
-            }};
+                }
+            };
             
             var dataStr = JSON.stringify(exportData, null, 2);
-            var dataBlob = new Blob([dataStr], {{type: 'application/json'}});
+            var dataBlob = new Blob([dataStr], {type: 'application/json'});
             var url = URL.createObjectURL(dataBlob);
             var link = document.createElement('a');
             link.href = url;
@@ -1145,80 +1059,80 @@ def generate_enhanced_test_visualization(test_data: Dict[str, Any]) -> str:
             URL.revokeObjectURL(url);
             
             updateStatus('✅ Advanced export completed');
-        }}
+        }
         
         // Utility Functions
-        function updateStatus(message) {{
+        function updateStatus(message) {
             document.getElementById('status').textContent = message;
-        }}
+        }
         
-        function showNodeDetails(node) {{
-            var details = "🔍 Entity Details\\n\\n";
-            details += "📋 ID: " + node.id + "\\n";
-            details += "🏷️ Type: " + node.type + "\\n";
-            details += "📝 Label: " + node.label + "\\n";
-            details += "⚠️ Risk Level: " + node.risk_level + "\\n";
-            details += "💰 Balance: $" + node.balance_usd.toLocaleString() + " USD\\n";
-            details += "🔄 Transactions: " + node.transaction_count + "\\n\\n";
+        function showNodeDetails(node) {
+            var details = "🔍 Entity Details\n\n";
+            details += "📋 ID: " + node.id + "\n";
+            details += "🏷️ Type: " + node.type + "\n";
+            details += "📝 Label: " + node.label + "\n";
+            details += "⚠️ Risk Level: " + node.risk_level + "\n";
+            details += "💰 Balance: $" + node.balance_usd.toLocaleString() + " USD\n";
+            details += "🔄 Transactions: " + node.transaction_count + "\n\n";
             
-            details += "📊 Additional Attributes:\\n";
-            for (var key in node.attributes) {{
-                details += "• " + key + ": " + node.attributes[key] + "\\n";
-            }}
+            details += "📊 Additional Attributes:\n";
+            for (var key in node.attributes) {
+                details += "• " + key + ": " + node.attributes[key] + "\n";
+            }
             
             alert(details);
-        }}
+        }
         
-        function showEdgeDetails(edge) {{
-            var details = "🔗 Relationship Details\\n\\n";
-            details += "📋 ID: " + edge.id + "\\n";
-            details += "🏷️ Type: " + edge.type + "\\n";
-            details += "📝 Label: " + edge.label + "\\n";
-            details += "📊 Strength: " + edge.strength + "\\n";
-            details += "🔄 From: " + edge.from + "\\n";
-            details += "🔄 To: " + edge.to + "\\n\\n";
+        function showEdgeDetails(edge) {
+            var details = "🔗 Relationship Details\n\n";
+            details += "📋 ID: " + edge.id + "\n";
+            details += "🏷️ Type: " + edge.type + "\n";
+            details += "📝 Label: " + edge.label + "\n";
+            details += "📊 Strength: " + edge.strength + "\n";
+            details += "🔄 From: " + edge.from + "\n";
+            details += "🔄 To: " + edge.to + "\n\n";
             
-            details += "📊 Additional Attributes:\\n";
-            for (var key in edge.attributes) {{
-                details += "• " + key + ": " + edge.attributes[key] + "\\n";
-            }}
+            details += "📊 Additional Attributes:\n";
+            for (var key in edge.attributes) {
+                details += "• " + key + ": " + edge.attributes[key] + "\n";
+            }
             
             alert(details);
-        }}
+        }
         
         // Keyboard shortcuts
-        document.addEventListener('keydown', function(event) {{
-            switch(event.code) {{
+        document.addEventListener('keydown', function(event) {
+            switch(event.code) {
                 case 'Space':
                     event.preventDefault();
                     network.fit();
                     break;
                 case 'KeyR':
-                    if (event.ctrlKey) {{
+                    if (event.ctrlKey) {
                         event.preventDefault();
                         resetView();
-                    }}
+                    }
                     break;
                 case 'KeyP':
-                    if (event.ctrlKey) {{
+                    if (event.ctrlKey) {
                         event.preventDefault();
                         togglePhysics();
-                    }}
+                    }
                     break;
-            }}
-        }});
+            }
+        });
         
         // Initialize
-        network.once("stabilizationIterationsDone", function() {{
+        network.once("stabilizationIterationsDone", function() {
             applyColors();
-            network.fit({{
-                animation: {{
+            network.fit({
+                animation: {
                     duration: 1000,
                     easingFunction: 'easeInOutQuad'
-                }}
-            }});
+                }
+            });
             updateStatus('🟢 Network Ready - ' + originalNodes.length + ' entities loaded');
-        }});
+        });
         
         // Apply initial colors
         applyColors();
@@ -1228,49 +1142,4 @@ def generate_enhanced_test_visualization(test_data: Dict[str, Any]) -> str:
         console.log('⌨️ Shortcuts: Space=Fit, Ctrl+R=Reset, Ctrl+P=Toggle Physics');
     </script>
 </body>
-</html>'''
-    
-    with open(html_path, 'w', encoding='utf-8') as f:
-        f.write(html_content)
-    
-    logger.info(f"Enhanced HTML visualization generated: {html_path}")
-    return html_path
-
-
-def main():
-    """Main function to run enhanced i2 test."""
-    try:
-        print("🌟 Enhanced i2 Network Visualization Test")
-        print("=" * 60)
-        
-        # Create enhanced test data
-        test_data = create_enhanced_test_data()
-        
-        # Generate enhanced visualization
-        html_path = generate_enhanced_test_visualization(test_data)
-        
-        # Open in browser
-        print(f"🌐 Opening enhanced visualization: {html_path}")
-        webbrowser.open(f'file://{os.path.abspath(html_path)}')
-        
-        print("=" * 60)
-        print("🎉 ENHANCED i2 TEST COMPLETE!")
-        print("=" * 60)
-        print(f"📄 HTML File: {html_path}")
-        print("💡 Check the opened browser tab for interactive visualization")
-        print("\n🎛️ Enhanced Features Available:")
-        print("  • Advanced Physics Controls (Barnes-Hut, Repulsion, etc.)")
-        print("  • Multiple Layout Algorithms (Hierarchical, Circular, Random)")
-        print("  • Smart Filtering (Risk Level, Entity Type)")
-        print("  • Visual Customization (Node sizing, Colors, Labels)")
-        print("  • Analysis Tools (Network Stats, Path Finding)")
-        print("  • Export Capabilities (JSON with metadata)")
-        print("  • Keyboard Shortcuts (Space, Ctrl+R, Ctrl+P)")
-        
-    except Exception as e:
-        logger.error(f"Enhanced test failed: {e}")
-        raise
-
-
-if __name__ == "__main__":
-    main()
+</html>

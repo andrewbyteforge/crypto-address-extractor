@@ -1,0 +1,69 @@
+<?xml version="1.0" ?>
+<Investigation>
+  <Entities>
+    <Entity EntityId="addr_0000" EntityType="CryptoAddress">
+      <Label>3FKWSyWgZgBNeEATqZbWZpZgYHjdRD</Label>
+      <Attributes>
+        <Attribute Name="Address">3FKWSyWgZgBNeEATqZbWZpZgYHjdRDt9aD</Attribute>
+        <Attribute Name="CryptoType">SOL</Attribute>
+        <Attribute Name="SourceFile">test.csv</Attribute>
+      </Attributes>
+    </Entity>
+    <Entity EntityId="addr_0001" EntityType="CryptoAddress">
+      <Label>bc1qxy2kgdygjrsqtzq2n0yrf2493p</Label>
+      <Attributes>
+        <Attribute Name="Address">bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</Attribute>
+        <Attribute Name="CryptoType">BTC</Attribute>
+        <Attribute Name="SourceFile">test.csv</Attribute>
+      </Attributes>
+    </Entity>
+    <Entity EntityId="addr_0002" EntityType="CryptoAddress">
+      <Label>1NDyJtNTjmwk5xPNhjgAMu4HDHigto</Label>
+      <Attributes>
+        <Attribute Name="Address">1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s</Attribute>
+        <Attribute Name="CryptoType">BTC</Attribute>
+        <Attribute Name="SourceFile">test.csv</Attribute>
+      </Attributes>
+    </Entity>
+    <Entity EntityId="addr_0003" EntityType="CryptoAddress">
+      <Label>3Cbq7aT1tY8kMxWLbitaG7yT6bPbKC</Label>
+      <Attributes>
+        <Attribute Name="Address">3Cbq7aT1tY8kMxWLbitaG7yT6bPbKChq64</Attribute>
+        <Attribute Name="CryptoType">BTC</Attribute>
+        <Attribute Name="SourceFile">test.csv</Attribute>
+      </Attributes>
+    </Entity>
+    <Entity EntityId="addr_0004" EntityType="CryptoAddress">
+      <Label>0xBE0eB53F46cd790Cd13851d5EFf4</Label>
+      <Attributes>
+        <Attribute Name="Address">0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8</Attribute>
+        <Attribute Name="CryptoType">ETH</Attribute>
+        <Attribute Name="SourceFile">test.csv</Attribute>
+      </Attributes>
+    </Entity>
+    <Entity EntityId="addr_0005" EntityType="CryptoAddress">
+      <Label>0xdAC17F958D2ee523a22062069945</Label>
+      <Attributes>
+        <Attribute Name="Address">0xdAC17F958D2ee523a2206206994597C13D831ec7</Attribute>
+        <Attribute Name="CryptoType">ETH</Attribute>
+        <Attribute Name="SourceFile">test.csv</Attribute>
+      </Attributes>
+    </Entity>
+    <Entity EntityId="addr_0006" EntityType="CryptoAddress">
+      <Label>0xA0b86991c6218b36c1d19D4a2e9E</Label>
+      <Attributes>
+        <Attribute Name="Address">0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48</Attribute>
+        <Attribute Name="CryptoType">ETH</Attribute>
+        <Attribute Name="SourceFile">test.csv</Attribute>
+      </Attributes>
+    </Entity>
+    <Entity EntityId="addr_0007" EntityType="CryptoAddress">
+      <Label>TN3W4H6rK2ce4vX9YnFQHwKENnHjox</Label>
+      <Attributes>
+        <Attribute Name="Address">TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9</Attribute>
+        <Attribute Name="CryptoType">TRX</Attribute>
+        <Attribute Name="SourceFile">test.csv</Attribute>
+      </Attributes>
+    </Entity>
+  </Entities>
+</Investigation>

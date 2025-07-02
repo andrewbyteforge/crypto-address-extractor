@@ -626,6 +626,472 @@ class FileHandler:
             # Don't raise - this is optional
 
 
+    def create_dashboard(self, entities, links, insights, flows=None, clusters=None):
+        """
+        Create interactive HTML dashboard with network visualization.
+        
+        Args:
+            entities: List of entities to visualize
+            links: List of links between entities  
+            insights: List of investigative insights
+            flows: Optional money flow paths
+            clusters: Optional risk clusters
+            
+        Returns:
+            str: Path to generated HTML dashboard
+            
+        Raises:
+            Exception: If dashboard creation fails
+        """
+        try:
+            self.logger.info("Creating interactive investigation dashboard")
+            
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            dashboard_path = f"investigation_dashboard_{timestamp}.html"
+            
+            html_content = self._generate_dashboard_html(entities, links, insights, flows, clusters)
+            
+            with open(dashboard_path, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            
+            self.logger.info(f"Dashboard created successfully: {dashboard_path}")
+            return dashboard_path
+            
+        except Exception as e:
+            self.logger.error(f"Dashboard creation failed: {e}", exc_info=True)
+            raise
+
+    def _generate_dashboard_html(self, entities, links, insights, flows=None, clusters=None):
+        """
+        Generate complete HTML dashboard content with vis.js network visualization.
+        
+        Returns:
+            str: Complete HTML content for dashboard
+        """
+        # Convert entities and links to vis.js format
+        nodes_data = []
+        edges_data = []
+        
+        for entity in entities:
+            node = {
+                'id': entity.get('id', ''),
+                'label': entity.get('label', '')[:30],
+                'title': self._generate_node_tooltip(entity),
+                'group': entity.get('type', 'unknown'),
+                'color': self._get_entity_color(entity.get('type', ''))
+            }
+            nodes_data.append(node)
+        
+        for link in links:
+            edge = {
+                'from': link.get('from', ''),
+                'to': link.get('to', ''),
+                'label': link.get('label', ''),
+                'title': self._generate_edge_tooltip(link),
+                'color': self._get_link_color(link.get('type', ''))
+            }
+            edges_data.append(edge)
+        
+        # Generate complete HTML with embedded data
+        html_template = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Cryptocurrency Investigation Dashboard</title>
+        <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }}
+            .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }}
+            .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }}
+            .stat-card {{ background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+            .stat-number {{ font-size: 24px; font-weight: bold; color: #667eea; }}
+            #network {{ width: 100%; height: 600px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+            .controls {{ background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; }}
+            button {{ background: #667eea; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Cryptocurrency Investigation Dashboard</h1>
+            <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number">{len(entities)}</div>
+                <div class="stat-label">Total Entities</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{len(links)}</div>
+                <div class="stat-label">Total Links</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{len(insights) if insights else 0}</div>
+                <div class="stat-label">Insights</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button onclick="network.fit()">Fit View</button>
+            <button onclick="togglePhysics()">Toggle Physics</button>
+        </div>
+        
+        <div id="network"></div>
+        
+        <script>
+            var nodes = new vis.DataSet({json.dumps(nodes_data)});
+            var edges = new vis.DataSet({json.dumps(edges_data)});
+            var data = {{nodes: nodes, edges: edges}};
+            
+            var options = {{
+                nodes: {{
+                    shape: 'dot',
+                    size: 15,
+                    font: {{size: 12}},
+                    borderWidth: 2
+                }},
+                edges: {{
+                    width: 2,
+                    arrows: {{to: {{enabled: true}}}}
+                }},
+                physics: {{
+                    enabled: true,
+                    stabilization: {{iterations: 100}}
+                }}
+            }};
+            
+            var container = document.getElementById('network');
+            var network = new vis.Network(container, data, options);
+            
+            function togglePhysics() {{
+                options.physics.enabled = !options.physics.enabled;
+                network.setOptions(options);
+            }}
+        </script>
+    </body>
+    </html>"""
+        
+        return html_template
+    
+
+    def _generate_node_tooltip(self, entity):
+        """Generate tooltip text for network nodes."""
+        tooltip = f"Type: {entity.get('type', 'Unknown')}\n"
+        tooltip += f"Label: {entity.get('label', 'No label')}\n"
+        
+        if 'attributes' in entity:
+            for key, value in entity['attributes'].items():
+                tooltip += f"{key}: {value}\n"
+        
+        return tooltip
+
+    def _generate_edge_tooltip(self, link):
+        """Generate tooltip text for network edges."""
+        tooltip = f"Type: {link.get('type', 'Unknown')}\n"
+        tooltip += f"Label: {link.get('label', 'No label')}\n"
+        return tooltip
+
+    def _get_entity_color(self, entity_type):
+        """Get color for entity based on type."""
+        colors = {
+            'CryptoAddress': '#FF6B6B',
+            'Exchange': '#4ECDC4',
+            'Cluster': '#45B7D1',
+            'Entity': '#96CEB4',
+            'Service': '#DDA0DD'
+        }
+        return colors.get(entity_type, '#95A5A6')
+
+    def _get_link_color(self, link_type):
+        """Get color for link based on type.""" 
+        colors = {
+            'SendsTo': '#E74C3C',
+            'ConnectedTo': '#3498DB',
+            'BelongsTo': '#2ECC71'
+        }
+        return colors.get(link_type, '#7F8C8D')
+    
+    #!/usr/bin/env python3
+    """
+    Column Definitions Sheet Enhancement for file_handler.py
+    ======================================================
+
+    This enhancement adds a "Column Definitions" sheet to the Excel output that explains
+    what each column heading means. The sheet is positioned after the Summary sheet.
+
+    Files modified: file_handler.py
+    Functions added: _create_column_definitions_sheet()
+    Functions modified: write_to_excel()
+
+    Author: Assistant
+    Date: 2025-07-02
+    Version: 1.0.0
+    """
+
+    import logging
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.utils import get_column_letter
+    from typing import List, Dict, Any
+
+
+    def _create_column_definitions_sheet(self, wb: Workbook, include_api_data: bool = False) -> None:
+        """
+        Create a column definitions sheet that explains what each column heading means.
+        This sheet acts as a reference key for users to understand the data structure.
+        
+        Args:
+            wb (Workbook): The workbook to add the sheet to
+            include_api_data (bool): Whether API data columns should be included in definitions
+            
+        Raises:
+            Exception: If sheet creation fails
+        """
+        try:
+            self.logger.info("Creating 'Column Definitions' sheet")
+            
+            # Create the sheet
+            ws = wb.create_sheet("Column Definitions")
+            
+            # Title
+            ws['A1'] = "Column Definitions & Reference Guide"
+            ws['A1'].font = Font(size=16, bold=True, color="FFFFFF")
+            ws['A1'].fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            ws['A1'].alignment = Alignment(horizontal="center")
+            ws.merge_cells('A1:C1')
+            
+            # Subtitle
+            ws['A2'] = "This sheet explains what each column heading means in the exported data"
+            ws['A2'].font = Font(size=11, italic=True)
+            ws['A2'].alignment = Alignment(horizontal="center")
+            ws.merge_cells('A2:C2')
+            
+            # Headers for the definitions table
+            ws['A4'] = "Column Name"
+            ws['B4'] = "Description"
+            ws['C4'] = "Example/Notes"
+            
+            # Format headers
+            for col in ['A4', 'B4', 'C4']:
+                ws[col].font = Font(bold=True, color="FFFFFF")
+                ws[col].fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+                ws[col].alignment = Alignment(horizontal="center")
+            
+            # Basic column definitions (always present)
+            basic_definitions = [
+                ("Address", "The cryptocurrency wallet address that was extracted", "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"),
+                ("Cluster Address", "The root address of the cluster this address belongs to (from API)", "Same format as Address"),
+                ("Cryptocurrency", "The type of cryptocurrency for this address", "Bitcoin, Ethereum, Litecoin, etc."),
+                ("Source File", "The name of the file where this address was found", "transactions.xlsx, addresses.csv"),
+                ("Sheet", "The specific sheet name in Excel files where address was found", "Sheet1, Transaction Data"),
+                ("Row", "The row number in the source file where address was located", "5, 127, 1450"),
+                ("Column", "The column number/letter where address was found", "3, A, D"),
+                ("Confidence %", "How confident the extraction algorithm is that this is a valid address", "95.5%, 100.0%"),
+                ("Is Duplicate", "Whether this exact address appears multiple times in the data", "Yes, No"),
+                ("Total Count", "How many times this address appears across all source files", "1, 3, 15")
+            ]
+            
+            # API-specific column definitions (only if API data is included)
+            api_definitions = [
+                ("Balance", "Current balance of the address in native cryptocurrency units", "1.25843210 BTC"),
+                ("Total Received", "Total amount ever received by this address", "5.67891234 BTC"),
+                ("Total Sent", "Total amount ever sent from this address", "4.42048024 BTC"),
+                ("Transfer Count", "Number of transactions involving this address", "157, 1205"),
+                ("Direct Exchange Exposure", "Exchanges that directly interact with this address", "Binance: 45.2%, Coinbase: 23.1%"),
+                ("Indirect Exchange Exposure", "Exchanges connected through 1-2 intermediate addresses", "Kraken: 12.5%, Bitfinex: 8.3%"),
+                ("Receiving Direct Exposure", "Exchanges this address directly receives funds from", "Binance: 60.5%"),
+                ("Receiving Indirect Exposure", "Exchanges connected to incoming transactions", "Coinbase: 25.0%"),
+                ("Sending Direct Exposure", "Exchanges this address directly sends funds to", "Kraken: 80.2%"),
+                ("Sending Indirect Exposure", "Exchanges connected to outgoing transactions", "Bitfinex: 15.5%"),
+                ("Darknet Market", "Whether address has known connections to darknet markets", "Y (Yes), N (No)"),
+                ("Risk Level", "Risk assessment based on transaction patterns and associations", "Low, Medium, High, Very High"),
+                ("Entity", "Known entity name associated with this address cluster", "Binance Hot Wallet, Coinbase"),
+                ("Cluster Category", "Category classification of the address cluster", "Exchange, Mixer, DeFi Protocol")
+            ]
+            
+            # Write basic definitions
+            current_row = 5
+            for col_name, description, example in basic_definitions:
+                ws.cell(row=current_row, column=1, value=col_name).font = Font(bold=True)
+                ws.cell(row=current_row, column=2, value=description)
+                ws.cell(row=current_row, column=3, value=example).font = Font(italic=True)
+                current_row += 1
+            
+            # Add API definitions if API data is included
+            if include_api_data:
+                # Add section header for API data
+                current_row += 1
+                ws.cell(row=current_row, column=1, value="API Enhanced Columns").font = Font(size=12, bold=True, color="FFFFFF")
+                ws.cell(row=current_row, column=1).fill = PatternFill(start_color="D99694", end_color="D99694", fill_type="solid")
+                ws.merge_cells(f'A{current_row}:C{current_row}')
+                current_row += 1
+                
+                ws.cell(row=current_row, column=1, value="(These columns appear when Chainalysis API analysis is enabled)")
+                ws.cell(row=current_row, column=1).font = Font(italic=True, size=10)
+                ws.merge_cells(f'A{current_row}:C{current_row}')
+                current_row += 1
+                
+                # Write API definitions
+                for col_name, description, example in api_definitions:
+                    ws.cell(row=current_row, column=1, value=col_name).font = Font(bold=True)
+                    ws.cell(row=current_row, column=2, value=description)
+                    ws.cell(row=current_row, column=3, value=example).font = Font(italic=True)
+                    current_row += 1
+            
+            # Add footer information
+            current_row += 2
+            ws.cell(row=current_row, column=1, value="Additional Information:")
+            ws.cell(row=current_row, column=1).font = Font(bold=True, size=12)
+            current_row += 1
+            
+            footer_info = [
+                "• Addresses are extracted using advanced pattern matching and checksum validation",
+                "• Confidence scores are based on format validation and checksum verification",
+                "• API data requires a valid Chainalysis API key and active internet connection",
+                "• Exchange exposure percentages represent transaction volume relationships",
+                "• Duplicate detection helps identify addresses that appear in multiple source files"
+            ]
+            
+            for info in footer_info:
+                ws.cell(row=current_row, column=1, value=info)
+                ws.merge_cells(f'A{current_row}:C{current_row}')
+                current_row += 1
+            
+            # Set column widths for better readability
+            ws.column_dimensions['A'].width = 25  # Column Name
+            ws.column_dimensions['B'].width = 60  # Description  
+            ws.column_dimensions['C'].width = 35  # Example/Notes
+            
+            # Add borders and formatting to make it more readable
+            from openpyxl.styles import Border, Side
+            thin_border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
+            
+            # Apply borders to the definitions table
+            for row in range(4, current_row - len(footer_info) - 2):
+                for col in range(1, 4):
+                    ws.cell(row=row, column=col).border = thin_border
+            
+            self.logger.info("✓ Created Column Definitions sheet successfully")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to create Column Definitions sheet: {str(e)}")
+            raise
+
+    def write_to_excel_enhanced(self, addresses: List[ExtractedAddress], output_path: str,
+                            include_api_data: bool = False) -> None:
+        """
+        Write extracted addresses to a formatted Excel file with multiple sheets including column definitions.
+    
+        Enhanced version that includes a Column Definitions sheet positioned after the Summary sheet.
+    
+        Args:
+            addresses (List[ExtractedAddress]): List of extracted addresses
+            output_path (str): Path for the output Excel file
+            include_api_data (bool): Whether to include API data columns
+        
+        Raises:
+            PermissionError: If file is open or inaccessible
+            Exception: For other errors
+        """
+        self.logger.info(f"Writing {len(addresses)} addresses to Excel: {output_path}")
+    
+        try:
+            # Create workbook
+            wb = Workbook()
+        
+            # Remove default sheet
+            if 'Sheet' in wb.sheetnames:
+                wb.remove(wb['Sheet'])
+        
+            # Create sheets in the desired order:
+            # 1. Summary sheet (position 0)
+            self._create_summary_sheet(wb, addresses, getattr(self, "_api_stats", None))
+        
+            # 2. Column Definitions sheet (position 1 - after Summary)
+            self._create_column_definitions_sheet(wb, include_api_data)
+        
+            # 3. All Addresses sheet (position 2)
+            self._create_all_addresses_sheet(wb, addresses, include_api_data)
+        
+            # 4. Individual crypto sheets (positions 3+)
+            # Group addresses by cryptocurrency
+            crypto_groups = defaultdict(list)
+            for addr in addresses:
+                crypto_groups[addr.crypto_name].append(addr)
+        
+            # Create individual crypto sheets
+            for crypto_name, crypto_addresses in crypto_groups.items():
+                self._create_crypto_sheet(wb, crypto_name, crypto_addresses, include_api_data)
+        
+            # Optional: Create duplicate analysis sheet (currently disabled)
+            # self._create_duplicate_analysis_sheet(wb, addresses)
+        
+            # Create additional analysis sheets if API data available (currently disabled)
+            # NOTE: These additional analysis sheets are temporarily disabled
+            # Uncomment when the methods are implemented
+            # if include_api_data and any(hasattr(addr, 'api_balance') for addr in addresses):
+            #     self._create_balance_sheet(wb, addresses)
+            #     self._create_exchange_exposure_sheet(wb, addresses)
+            #     self._create_high_value_sheet(wb, addresses)
+            #     self._create_risk_analysis_sheet(wb, addresses)
+        
+            # Save workbook
+            wb.save(output_path)
+            self.logger.info(f"Successfully created Excel file with Column Definitions: {output_path}")
+        
+        except PermissionError as e:
+            error_msg = f"Permission denied writing to {output_path}. Please close the file if it's open."
+            self.logger.error(error_msg)
+            raise PermissionError(error_msg) from e
+        except Exception as e:
+            error_msg = f"Failed to create Excel file: {str(e)}"
+            self.logger.error(error_msg, exc_info=True)
+            raise Exception(error_msg) from e
+
+    # Instructions for implementation:
+    """
+    IMPLEMENTATION INSTRUCTIONS
+    ==========================
+
+    1. **Add the new method to file_handler.py**:
+    - Copy the `_create_column_definitions_sheet` method into your FileHandler class
+    - Ensure proper indentation and that it's inside the class definition
+
+    2. **Update the write_to_excel method**:
+    - Replace the existing `write_to_excel` method with `write_to_excel_enhanced`
+    - Or manually add the call to `self._create_column_definitions_sheet(wb, include_api_data)` 
+        right after the Summary sheet creation and before All Addresses sheet creation
+
+    3. **Required imports** (should already be present in file_handler.py):
+    - from openpyxl import Workbook
+    - from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    - from openpyxl.utils import get_column_letter
+    - from typing import List
+    - from collections import defaultdict
+
+    4. **Error handling**:
+    - The method includes comprehensive error handling and logging
+    - Failures in creating the definitions sheet won't crash the entire export process
+
+    5. **Sheet positioning**:
+    - Summary sheet (position 0)
+    - Column Definitions sheet (position 1) ← NEW
+    - All Addresses sheet (position 2)
+    - Individual crypto sheets (positions 3+)
+
+    The Column Definitions sheet will help users understand:
+    - What each column represents
+    - Example values for each field
+    - Differences between basic and API-enhanced columns
+    - Additional context about the extraction process
+    """
+
+
 
 
     def _create_crypto_sheet(self, wb: Workbook, crypto_name: str,
