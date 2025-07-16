@@ -1,14 +1,14 @@
 """
-File Handler Module - Production Ready Version with Address Frequency Analysis
-=============================================================================
+File Handler Module - Production Ready Version with Direct/Indirect Exposure
+===========================================================================
 
 This module handles all file I/O operations for the cryptocurrency address extractor.
 Provides methods for reading CSV/Excel files and writing comprehensive Excel reports
-with multiple analysis sheets including address frequency analysis.
+with multiple analysis sheets including both direct and indirect exchange exposure.
 
 Author: Crypto Extractor Tool
-Date: 2025-07-16
-Version: 2.4.0 - Added Address Frequency Analysis feature
+Date: 2025-01-18
+Version: 2.3.0 - Refactored with Summary and Column Definitions Sheets
 """
 
 import os
@@ -17,7 +17,7 @@ import pandas as pd
 from typing import List, Dict, Optional, Tuple, Any
 from datetime import datetime
 from collections import defaultdict
-from openpyxl import Workbook
+from ope, Counternpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.formatting.rule import CellIsRule
@@ -41,7 +41,6 @@ class FileHandler:
     - Enhanced direct and indirect exchange exposure display
     - Summary sheet with extraction statistics
     - Column definitions sheet for user reference
-    - Address frequency analysis sheet
     """
     
     # Excel row limit with safety buffer
@@ -204,16 +203,11 @@ class FileHandler:
         """
         Write extracted addresses to a formatted Excel file with multiple sheets.
         
-        File: file_handler.py
-        Function: write_to_excel()
-        
         Creates the following sheets in order:
         1. Summary - Extraction statistics and API usage
         2. Column Definitions - Explanation of all column headers
-        3. Address Frequency Analysis - Cluster address frequency analysis (NEW)
-        4. All Addresses - Complete list of all extracted addresses
-        5. Individual crypto sheets - One sheet per cryptocurrency type
-        6. Duplicate Analysis - If duplicates exist
+        3. All Addresses - Complete list of all extracted addresses
+        4. Individual crypto sheets - One sheet per cryptocurrency type
         
         Args:
             addresses (List[ExtractedAddress]): List of extracted addresses
@@ -241,13 +235,10 @@ class FileHandler:
             # 2. Column Definitions sheet (position 1)
             self._create_column_definitions_sheet(wb, include_api_data)
             
-            # 3. Address Frequency Analysis sheet (position 2) - NEW FEATURE
-            self._create_frequency_analysis_sheet(wb, addresses, include_api_data)
-            
-            # 4. All Addresses sheet (position 3)
+            # 3. All Addresses sheet (position 2)
             self._create_all_addresses_sheet(wb, addresses, include_api_data)
             
-            # 5. Individual crypto sheets (positions 4+)
+            # 4. Individual crypto sheets (positions 3+)
             crypto_groups = defaultdict(list)
             for addr in addresses:
                 crypto_groups[addr.crypto_name].append(addr)
@@ -256,13 +247,13 @@ class FileHandler:
             for crypto_name, crypto_addresses in crypto_groups.items():
                 self._create_crypto_sheet(wb, crypto_name, crypto_addresses, include_api_data)
             
-            # 6. Optional: Create duplicate analysis sheet if duplicates exist
+            # 5. Optional: Create duplicate analysis sheet if duplicates exist
             if any(addr.is_duplicate for addr in addresses):
                 self._create_duplicate_analysis_sheet(wb, addresses)
             
             # Save workbook
             wb.save(output_path)
-            self.logger.info(f"Successfully created Excel file with Address Frequency Analysis: {output_path}")
+            self.logger.info(f"Successfully created Excel file with Summary and Column Definitions: {output_path}")
             
         except PermissionError as e:
             error_msg = f"Permission denied writing to {output_path}. Please close the file if it's open."
@@ -439,10 +430,8 @@ class FileHandler:
 
     def _create_column_definitions_sheet(self, wb: Workbook, include_api_data: bool = False) -> None:
         """
-        Create column definitions sheet with complete Address Frequency Analysis headers.
-        
-        File: file_handler.py
-        Function: _create_column_definitions_sheet()
+        Create a column definitions sheet that explains what each column heading means.
+        This sheet acts as a reference key for users to understand the data structure.
         
         Args:
             wb (Workbook): The workbook to add the sheet to
@@ -452,7 +441,7 @@ class FileHandler:
             Exception: If sheet creation fails
         """
         try:
-            self.logger.info("Creating 'Column Definitions' sheet with enhanced frequency analysis")
+            self.logger.info("Creating 'Column Definitions' sheet")
             
             # Create the sheet at position 1 (after Summary)
             ws = wb.create_sheet("Column Definitions", 1)
@@ -485,8 +474,7 @@ class FileHandler:
             basic_definitions = [
                 ("Address", "The cryptocurrency wallet address that was extracted", "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"),
                 ("Cluster Address", "The root address of the cluster this address belongs to (from API)", "Same format as Address"),
-                ("Cluster Name", "Entity name from Chainalysis API", "Binance Hot Wallet, Coinbase"),
-                ("Cryptocurrency Type", "The type of cryptocurrency for this address", "Bitcoin, Ethereum, Litecoin, etc."),
+                ("Cryptocurrency", "The type of cryptocurrency for this address", "Bitcoin, Ethereum, Litecoin, etc."),
                 ("Source File", "The name of the file where this address was found", "transactions.xlsx, addresses.csv"),
                 ("Sheet", "The specific sheet name in Excel files where address was found", "Sheet1, Transaction Data"),
                 ("Row", "The row number in the source file where address was located", "5, 127, 1450"),
@@ -494,17 +482,6 @@ class FileHandler:
                 ("Confidence %", "How confident the extraction algorithm is that this is a valid address", "95.5%, 100.0%"),
                 ("Is Duplicate", "Whether this exact address appears multiple times in the data", "Yes, No"),
                 ("Total Count", "How many times this address appears across all source files", "1, 3, 15")
-            ]
-            
-            # Address Frequency Analysis sheet specific column definitions
-            frequency_analysis_definitions = [
-                ("Cluster Address", "Representative address for the cluster/entity", "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"),
-                ("Cluster Name", "Name of the entity or service from Chainalysis API", "Binance Hot Wallet, Coinbase Pro"),
-                ("Individual Address Count", "Number of times this specific cluster address appears", "5, 12, 25"),
-                ("Cluster Total Count", "Total appearances of ALL addresses belonging to this cluster", "152, 300, 1,025"),
-                ("Cryptocurrency Type", "Type of cryptocurrency for addresses in this cluster", "Bitcoin, Ethereum, Multiple"),
-                ("Files Containing Address", "Source files where this cluster address appears", "file1.csv, transactions.xlsx"),
-                ("Sheets Containing Address", "Excel sheets containing this cluster address", "Sheet1, Data, N/A")
             ]
             
             # API-specific column definitions (only if API data is included)
@@ -533,40 +510,9 @@ class FileHandler:
                 ws.cell(row=current_row, column=3, value=example)
                 current_row += 1
             
-            # Add Address Frequency Analysis definitions as table rows
-            current_row += 1
-            ws.cell(row=current_row, column=1, value="ADDRESS FREQUENCY ANALYSIS SHEET COLUMNS").font = Font(bold=True, size=12, color="366092")
-            ws.merge_cells(f'A{current_row}:C{current_row}')
-            current_row += 1
-            
-            for col_name, description, example in frequency_analysis_definitions:
-                ws.cell(row=current_row, column=1, value=col_name).font = Font(bold=True)
-                ws.cell(row=current_row, column=2, value=description)
-                ws.cell(row=current_row, column=3, value=example)
-                current_row += 1
-            
-            # Add investigative guidance
-            current_row += 1
-            ws.cell(row=current_row, column=1, value="INVESTIGATIVE GUIDANCE").font = Font(bold=True, size=12, color="366092")
-            ws.merge_cells(f'A{current_row}:C{current_row}')
-            current_row += 1
-            
-            investigative_guidance = [
-                ("Color Coding Priority", "Based on Cluster Total Count for investigation prioritization", "Red = Highest priority entities"),
-                ("Individual vs Cluster", "Compare counts to understand entity behavior patterns", "High cluster, low individual = distributed entity"),
-                ("Entity Pattern Analysis", "Equal counts suggest single-address entities (personal wallets)", "Different counts suggest multi-address entities (exchanges)"),
-                ("Investigation Focus", "Start with pale red entries (10+ cluster total)", "These represent most active entities"),
-                ("Compliance Priority", "High cluster totals may indicate major financial institutions", "Requires enhanced due diligence")
-            ]
-            
-            for col_name, description, example in investigative_guidance:
-                ws.cell(row=current_row, column=1, value=col_name).font = Font(bold=True)
-                ws.cell(row=current_row, column=2, value=description)
-                ws.cell(row=current_row, column=3, value=example)
-                current_row += 1
-            
             # Add API definitions if API data is included
             if include_api_data:
+                # Add a separator
                 current_row += 1
                 ws.cell(row=current_row, column=1, value="API DATA COLUMNS").font = Font(bold=True, size=12, color="FF0000")
                 ws.merge_cells(f'A{current_row}:C{current_row}')
@@ -578,10 +524,26 @@ class FileHandler:
                     ws.cell(row=current_row, column=3, value=example)
                     current_row += 1
             
+            # Add footer information
+            current_row += 2
+            footer_info = [
+                "IMPORTANT NOTES:",
+                "• Duplicate addresses are highlighted in yellow in the 'All Addresses' sheet",
+                "• Individual cryptocurrency sheets show only unique addresses (no duplicates)",
+                "• Exchange exposure percentages show the portion of funds connected to each exchange",
+                "• Darknet market connections are flagged for compliance and investigation purposes",
+                "• This extraction helps identify addresses that appear in multiple source files"
+            ]
+            
+            for info in footer_info:
+                ws.cell(row=current_row, column=1, value=info)
+                ws.merge_cells(f'A{current_row}:C{current_row}')
+                current_row += 1
+            
             # Set column widths for better readability
-            ws.column_dimensions['A'].width = 30  # Column Name
+            ws.column_dimensions['A'].width = 25  # Column Name
             ws.column_dimensions['B'].width = 60  # Description  
-            ws.column_dimensions['C'].width = 40  # Example/Notes
+            ws.column_dimensions['C'].width = 35  # Example/Notes
             
             # Add borders and formatting to make it more readable
             thin_border = Border(
@@ -591,12 +553,10 @@ class FileHandler:
                 bottom=Side(style='thin')
             )
             
-            # Apply borders to all table rows
-            for row in range(4, current_row + 1):
+            # Apply borders to the definitions table
+            for row in range(4, current_row - len(footer_info) - 2):
                 for col in range(1, 4):
-                    cell = ws.cell(row=row, column=col)
-                    if cell.value and not (cell.font.size and cell.font.size > 11):
-                        cell.border = thin_border
+                    ws.cell(row=row, column=col).border = thin_border
             
             self.logger.info("✓ Created Column Definitions sheet successfully")
             
@@ -604,375 +564,6 @@ class FileHandler:
             error_msg = f"Failed to create Column Definitions sheet: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             raise Exception(error_msg) from e
-
-    def _create_frequency_analysis_sheet(self, wb: Workbook, addresses: List[ExtractedAddress], 
-                                    include_api_data: bool = False) -> None:
-        """
-        Create Address Frequency Analysis sheet showing both individual and cluster frequencies.
-        
-        File: file_handler.py
-        Function: _create_frequency_analysis_sheet()
-        
-        This sheet shows both individual address counts and total cluster counts to help
-        investigators understand entity behavior patterns and prioritize investigations.
-        
-        Args:
-            wb (Workbook): The workbook to add the sheet to
-            addresses (List[ExtractedAddress]): List of all extracted addresses
-            include_api_data (bool): Whether API data is available
-            
-        Raises:
-            Exception: If frequency analysis sheet creation fails
-        """
-        try:
-            self.logger.info("Creating Address Frequency Analysis sheet with dual counting")
-            
-            # Create frequency data structure with both counts
-            frequency_data = self._analyze_cluster_frequency(addresses, include_api_data)
-            
-            # Create worksheet at position 2
-            ws = wb.create_sheet("Address Frequency Analysis", 2)
-            
-            # Add statistics summary at the top
-            self._add_frequency_statistics(ws, frequency_data, len(addresses))
-            
-            # Add breathing space (3 empty rows) between summary and table
-            start_row = 8  # Statistics end at row 4, add 3 empty rows = start at row 8
-            
-            # Define enhanced headers with both count types
-            headers = [
-                "Cluster Address",
-                "Cluster Name", 
-                "Individual Address Count",
-                "Cluster Total Count", 
-                "Cryptocurrency Type",
-                "Files Containing Address",
-                "Sheets Containing Address"
-            ]
-            
-            # Write headers with styling at the new start row
-            self._write_frequency_headers_with_styling(ws, headers, start_row=start_row)
-            
-            # Sort frequency data by cluster total count (highest first) for investigative priorities
-            sorted_data = sorted(frequency_data, key=lambda x: x['cluster_total_count'], reverse=True)
-            
-            # Write frequency data starting after headers
-            for row_idx, freq_data in enumerate(sorted_data, start=start_row + 1):
-                self._write_frequency_row(ws, row_idx, freq_data)
-            
-            # Apply pale color coding based on cluster total count (most important for investigations)
-            self._apply_frequency_color_coding(ws, sorted_data, start_row=start_row + 1)
-            
-            # Auto-fit columns
-            self._auto_fit_frequency_columns(ws)
-            
-            self.logger.info(f"✓ Created Address Frequency Analysis sheet with {len(frequency_data)} cluster addresses")
-            
-        except Exception as e:
-            self.logger.error(f"Failed to create Address Frequency Analysis sheet: {str(e)}", exc_info=True)
-            raise
-
-    def _analyze_cluster_frequency(self, addresses: List[ExtractedAddress], 
-                                include_api_data: bool) -> List[Dict]:
-        """
-        Analyze both individual address and cluster total frequencies.
-        
-        File: file_handler.py
-        Function: _analyze_cluster_frequency()
-        
-        Calculates two important metrics:
-        1. Individual Address Count - How many times this specific address appears
-        2. Cluster Total Count - How many times ALL addresses in this cluster appear
-        
-        Args:
-            addresses (List[ExtractedAddress]): List of extracted addresses
-            include_api_data (bool): Whether API data is available
-            
-        Returns:
-            List[Dict]: List of frequency analysis data with both count types
-        """
-        self.logger.info("Analyzing cluster address frequencies with dual counting")
-        
-        # Group addresses by cluster address
-        cluster_groups = defaultdict(lambda: {
-            'addresses': [],
-            'cluster_name': 'Unknown',
-            'crypto_types': set(),
-            'files': set(),
-            'sheets': set()
-        })
-        
-        # Also track all addresses by cluster name for total counting
-        cluster_name_totals = defaultdict(list)
-        
-        for addr in addresses:
-            # Determine the cluster address to use
-            if include_api_data and hasattr(addr, 'api_cluster_root_address') and addr.api_cluster_root_address:
-                cluster_address = addr.api_cluster_root_address
-                cluster_name = getattr(addr, 'api_cluster_name', 'Unknown')
-            else:
-                # Fallback to original address if no cluster data
-                cluster_address = addr.address
-                cluster_name = 'Unknown'
-            
-            # Add to cluster address group (for individual count)
-            cluster_groups[cluster_address]['addresses'].append(addr)
-            cluster_groups[cluster_address]['cluster_name'] = cluster_name
-            cluster_groups[cluster_address]['crypto_types'].add(addr.crypto_type)
-            cluster_groups[cluster_address]['files'].add(addr.filename)
-            
-            # Add sheet name if available
-            if hasattr(addr, 'sheet_name') and addr.sheet_name:
-                cluster_groups[cluster_address]['sheets'].add(addr.sheet_name)
-            
-            # Track all addresses for this cluster name (for total count)
-            cluster_name_totals[cluster_name].append(addr)
-        
-        # Convert to frequency analysis format with both counts
-        frequency_data = []
-        for cluster_address, group_data in cluster_groups.items():
-            cluster_name = group_data['cluster_name']
-            individual_count = len(group_data['addresses'])  # Count for this specific address
-            cluster_total_count = len(cluster_name_totals[cluster_name])  # Count for entire cluster
-            
-            frequency_data.append({
-                'cluster_address': cluster_address,
-                'cluster_name': cluster_name,
-                'individual_count': individual_count,
-                'cluster_total_count': cluster_total_count,
-                'crypto_types': ', '.join(sorted(group_data['crypto_types'])),
-                'files': ', '.join(sorted(group_data['files'])),
-                'sheets': ', '.join(sorted(group_data['sheets'])) if group_data['sheets'] else 'N/A'
-            })
-        
-        self.logger.info(f"Analyzed {len(frequency_data)} unique cluster addresses")
-        self.logger.info(f"Found {len(cluster_name_totals)} unique cluster entities")
-        return frequency_data
-
-    def _write_frequency_row(self, ws: Worksheet, row_idx: int, freq_data: Dict) -> None:
-        """
-        Write a single frequency data row with both count types.
-        
-        File: file_handler.py
-        Function: _write_frequency_row()
-        """
-        ws.cell(row=row_idx, column=1, value=freq_data['cluster_address'])
-        ws.cell(row=row_idx, column=2, value=freq_data['cluster_name'])
-        ws.cell(row=row_idx, column=3, value=freq_data['individual_count'])
-        ws.cell(row=row_idx, column=4, value=freq_data['cluster_total_count'])
-        ws.cell(row=row_idx, column=5, value=freq_data['crypto_types'])
-        ws.cell(row=row_idx, column=6, value=freq_data['files'])
-        ws.cell(row=row_idx, column=7, value=freq_data['sheets'])
-
-
-
-
-
-
-
-    def _write_frequency_headers_with_styling(self, ws: Worksheet, headers: List[str], start_row: int = 1) -> None:
-        """
-        Write headers with professional styling.
-        
-        File: file_handler.py
-        Function: _write_frequency_headers_with_styling()
-        
-        Updated to handle the new 7-column layout.
-        """
-        for col, header in enumerate(headers, 1):
-            cell = ws.cell(row=start_row, column=col, value=header)
-            cell.font = Font(bold=True, color="FFFFFF")
-            cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-            cell.alignment = Alignment(horizontal="center", vertical="center")
-            cell.border = Border(
-                left=Side(style="thin"),
-                right=Side(style="thin"), 
-                top=Side(style="thin"),
-                bottom=Side(style="thin")
-            )
-
-    def _write_frequency_row(self, ws: Worksheet, row_idx: int, freq_data: Dict) -> None:
-        """
-        Write a single frequency data row.
-        
-        File: file_handler.py
-        Function: _write_frequency_row()
-        """
-        ws.cell(row=row_idx, column=1, value=freq_data['cluster_address'])
-        ws.cell(row=row_idx, column=2, value=freq_data['cluster_name'])
-        ws.cell(row=row_idx, column=3, value=freq_data['frequency'])
-        ws.cell(row=row_idx, column=4, value=freq_data['crypto_types'])
-        ws.cell(row=row_idx, column=5, value=freq_data['files'])
-        ws.cell(row=row_idx, column=6, value=freq_data['sheets'])
-
-
-
-    def _apply_frequency_color_coding(self, ws: Worksheet, sorted_data: List[Dict], start_row: int = 2) -> None:
-        """
-        Apply pale color coding based on cluster total count (investigative priority).
-        
-        File: file_handler.py
-        Function: _apply_frequency_color_coding()
-        
-        Pale Color Scheme based on Cluster Total Count:
-        - Pale Red: 10+ total cluster occurrences (very high priority)
-        - Pale Orange: 5-9 total cluster occurrences (high priority)  
-        - Pale Yellow: 3-4 total cluster occurrences (medium priority)
-        - Pale Green: 2 total cluster occurrences (low priority)
-        - White: 1 total cluster occurrence (single occurrence)
-        """
-        self.logger.info("Applying pale frequency-based color coding (cluster total count)")
-        
-        # Define pale color fills (much softer on the eyes)
-        colors = {
-            'very_high': PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid"),    # Pale Red
-            'high': PatternFill(start_color="FFE5CC", end_color="FFE5CC", fill_type="solid"),         # Pale Orange  
-            'medium': PatternFill(start_color="FFFFCC", end_color="FFFFCC", fill_type="solid"),       # Pale Yellow
-            'low': PatternFill(start_color="E5FFCC", end_color="E5FFCC", fill_type="solid"),          # Pale Green
-            'single': PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")        # White
-        }
-        
-        # Apply colors based on cluster total count (investigative priority)
-        for idx, freq_data in enumerate(sorted_data):
-            row_idx = start_row + idx
-            cluster_total = freq_data['cluster_total_count']
-            
-            # Determine color based on cluster total count
-            if cluster_total >= 10:
-                fill_color = colors['very_high']
-            elif cluster_total >= 5:
-                fill_color = colors['high']
-            elif cluster_total >= 3:
-                fill_color = colors['medium']
-            elif cluster_total == 2:
-                fill_color = colors['low']
-            else:  # cluster_total == 1
-                fill_color = colors['single']
-            
-            # Apply color to all cells in the row
-            for col in range(1, 8):  # 7 columns now
-                ws.cell(row=row_idx, column=col).fill = fill_color
-
-
-
-
-    def _auto_fit_frequency_columns(self, ws: Worksheet) -> None:
-        """
-        Auto-fit columns for optimal display with enhanced headers.
-        
-        File: file_handler.py
-        Function: _auto_fit_frequency_columns()
-        """
-        # Set specific column widths for frequency analysis with new columns
-        column_widths = {
-            'A': 50,  # Cluster Address
-            'B': 30,  # Cluster Name
-            'C': 20,  # Individual Address Count
-            'D': 18,  # Cluster Total Count
-            'E': 20,  # Cryptocurrency Type
-            'F': 40,  # Files Containing Address
-            'G': 30   # Sheets Containing Address
-        }
-        
-        for column, width in column_widths.items():
-            ws.column_dimensions[column].width = width
-
-
-
-
-
-
-
-
-
-
-
-
-
-    def _add_frequency_statistics(self, ws: Worksheet, frequency_data: List[Dict], 
-                                total_addresses: int) -> None:
-        """
-        Add enhanced statistical summary with both individual and cluster metrics.
-        
-        File: file_handler.py
-        Function: _add_frequency_statistics()
-        
-        This adds summary statistics showing both individual address and cluster totals.
-        """
-        # Calculate enhanced statistics
-        if not frequency_data:
-            # Handle empty data case
-            ws.cell(row=1, column=1, value="ADDRESS FREQUENCY ANALYSIS SUMMARY")
-            ws.cell(row=1, column=1).font = Font(bold=True, size=14)
-            ws.cell(row=2, column=1, value=f"Total Addresses Analyzed: {total_addresses}")
-            ws.cell(row=2, column=4, value="Unique Cluster Addresses: 0")
-            ws.cell(row=3, column=1, value="No frequency data available")
-            return
-        
-        # Calculate statistics for both count types
-        individual_counts = [data['individual_count'] for data in frequency_data]
-        cluster_totals = [data['cluster_total_count'] for data in frequency_data]
-        
-        total_unique_clusters = len(set(data['cluster_name'] for data in frequency_data))
-        avg_individual = sum(individual_counts) / len(individual_counts) if individual_counts else 0
-        avg_cluster_total = sum(cluster_totals) / len(cluster_totals) if cluster_totals else 0
-        max_cluster_total = max(cluster_totals) if cluster_totals else 0
-        
-        # Find the most active cluster
-        most_active = max(frequency_data, key=lambda x: x['cluster_total_count']) if frequency_data else None
-        
-        # Write enhanced statistics with better formatting
-        ws.cell(row=1, column=1, value="ADDRESS FREQUENCY ANALYSIS SUMMARY")
-        ws.cell(row=1, column=1).font = Font(bold=True, size=16, color="FFFFFF")
-        ws.cell(row=1, column=1).fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-        ws.cell(row=1, column=1).alignment = Alignment(horizontal="center")
-        ws.merge_cells('A1:G1')  # Merge across all 7 columns
-        
-        # Enhanced statistics with both metrics
-        ws.cell(row=2, column=1, value=f"Total Addresses Analyzed: {total_addresses}")
-        ws.cell(row=2, column=1).font = Font(bold=True)
-        ws.cell(row=2, column=4, value=f"Unique Cluster Entities: {total_unique_clusters}")
-        ws.cell(row=2, column=4).font = Font(bold=True)
-        
-        ws.cell(row=3, column=1, value=f"Avg Individual Count: {avg_individual:.1f}")
-        ws.cell(row=3, column=1).font = Font(bold=True)
-        ws.cell(row=3, column=4, value=f"Avg Cluster Total: {avg_cluster_total:.1f}")
-        ws.cell(row=3, column=4).font = Font(bold=True)
-        
-        if most_active:
-            ws.cell(row=4, column=1, value=f"Most Active Cluster: {most_active['cluster_name']} ({most_active['cluster_total_count']} total occurrences)")
-            ws.cell(row=4, column=1).font = Font(bold=True)
-            ws.merge_cells('A4:G4')  # Merge across all columns for this longer text
-        
-        # Add enhanced color coding legend
-        ws.cell(row=5, column=1, value="Color Legend (Based on Cluster Total Count):")
-        ws.cell(row=5, column=1).font = Font(bold=True, size=12)
-        
-        # Create legend with actual colors
-        legend_items = [
-            ("Pale Red: 10+ total", "FFCCCC"),
-            ("Pale Orange: 5-9 total", "FFE5CC"),
-            ("Pale Yellow: 3-4 total", "FFFFCC"),
-            ("Pale Green: 2 total", "E5FFCC"),
-            ("White: 1 total", "FFFFFF")
-        ]
-        
-        col = 2
-        for legend_text, color_hex in legend_items:
-            ws.cell(row=5, column=col, value=legend_text)
-            ws.cell(row=5, column=col).fill = PatternFill(start_color=color_hex, end_color=color_hex, fill_type="solid")
-            ws.cell(row=5, column=col).font = Font(size=9)
-            col += 1
-        
-        # Style the statistics section with a light background
-        for row in range(1, 6):
-            for col in range(1, 8):
-                cell = ws.cell(row=row, column=col)
-                if cell.value and row != 1 and row != 5:  # Don't override title and legend formatting
-                    cell.fill = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")
-
-
-
 
     def _create_all_addresses_sheet(self, wb: Workbook, addresses: List[ExtractedAddress],
                                    include_api_data: bool) -> None:
@@ -1315,3 +906,270 @@ class FileHandler:
                 formatted_parts.append(name)
         
         return "; ".join(formatted_parts)
+    def _create_frequency_analysis_sheet(self, wb: Workbook, addresses: List[ExtractedAddress], 
+                                       include_api_data: bool = False) -> None:
+        """
+        Create Address Frequency Analysis sheet showing cluster address frequencies.
+        
+        File: file_handler.py
+        Function: _create_frequency_analysis_sheet()
+        
+        This sheet shows how many times each cluster address appears across all datasets,
+        using existing Chainalysis API data without making additional API calls.
+        
+        Args:
+            wb (Workbook): The workbook to add the sheet to
+            addresses (List[ExtractedAddress]): List of all extracted addresses
+            include_api_data (bool): Whether API data is available
+            
+        Raises:
+            Exception: If frequency analysis sheet creation fails
+        """
+        try:
+            self.logger.info("Creating Address Frequency Analysis sheet")
+            
+            # Create frequency data structure
+            frequency_data = self._analyze_cluster_frequency(addresses, include_api_data)
+            
+            # Create worksheet
+            ws = wb.create_sheet("Address Frequency Analysis")
+            
+            # Add statistics summary at the top (will insert rows)
+            self._add_frequency_statistics(ws, frequency_data, len(addresses))
+            
+            # Define headers (now starting at row 5 due to statistics)
+            headers = [
+                "Cluster Address",
+                "Cluster Name", 
+                "Frequency Count",
+                "Cryptocurrency Type",
+                "Files Containing Address",
+                "Sheets Containing Address"
+            ]
+            
+            # Write headers with styling at row 5
+            self._write_frequency_headers_with_styling(ws, headers, start_row=5)
+            
+            # Sort frequency data by count (highest first)
+            sorted_data = sorted(frequency_data, key=lambda x: x['frequency'], reverse=True)
+            
+            # Write frequency data starting at row 6
+            for row_idx, freq_data in enumerate(sorted_data, start=6):
+                self._write_frequency_row(ws, row_idx, freq_data)
+            
+            # Apply color coding based on frequency (skip statistics rows)
+            self._apply_frequency_color_coding(ws, sorted_data, start_row=6)
+            
+            # Auto-fit columns
+            self._auto_fit_frequency_columns(ws)
+            
+            self.logger.info(f"✓ Created Address Frequency Analysis sheet with {len(frequency_data)} cluster addresses")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to create Address Frequency Analysis sheet: {str(e)}", exc_info=True)
+            raise
+
+    def _analyze_cluster_frequency(self, addresses: List[ExtractedAddress], 
+                                 include_api_data: bool) -> List[Dict]:
+        """
+        Analyze cluster address frequencies from extracted addresses.
+        
+        File: file_handler.py
+        Function: _analyze_cluster_frequency()
+        
+        Args:
+            addresses (List[ExtractedAddress]): List of extracted addresses
+            include_api_data (bool): Whether API data is available
+            
+        Returns:
+            List[Dict]: List of frequency analysis data
+        """
+        self.logger.info("Analyzing cluster address frequencies")
+        
+        # Group addresses by cluster address
+        cluster_groups = defaultdict(lambda: {
+            'addresses': [],
+            'cluster_name': 'Unknown',
+            'crypto_types': set(),
+            'files': set(),
+            'sheets': set()
+        })
+        
+        for addr in addresses:
+            # Determine the cluster address to use
+            if include_api_data and hasattr(addr, 'api_cluster_root_address') and addr.api_cluster_root_address:
+                cluster_address = addr.api_cluster_root_address
+                cluster_name = getattr(addr, 'api_cluster_name', 'Unknown')
+            else:
+                # Fallback to original address if no cluster data
+                cluster_address = addr.address
+                cluster_name = 'Unknown'
+            
+            # Add to cluster group
+            cluster_groups[cluster_address]['addresses'].append(addr)
+            cluster_groups[cluster_address]['cluster_name'] = cluster_name
+            cluster_groups[cluster_address]['crypto_types'].add(addr.crypto_type)
+            cluster_groups[cluster_address]['files'].add(addr.filename)
+            
+            # Add sheet name if available
+            if hasattr(addr, 'sheet_name') and addr.sheet_name:
+                cluster_groups[cluster_address]['sheets'].add(addr.sheet_name)
+        
+        # Convert to frequency analysis format
+        frequency_data = []
+        for cluster_address, group_data in cluster_groups.items():
+            frequency_data.append({
+                'cluster_address': cluster_address,
+                'cluster_name': group_data['cluster_name'],
+                'frequency': len(group_data['addresses']),
+                'crypto_types': ', '.join(sorted(group_data['crypto_types'])),
+                'files': ', '.join(sorted(group_data['files'])),
+                'sheets': ', '.join(sorted(group_data['sheets'])) if group_data['sheets'] else 'N/A'
+            })
+        
+        self.logger.info(f"Analyzed {len(frequency_data)} unique cluster addresses")
+        return frequency_data
+
+    def _write_frequency_headers_with_styling(self, ws: Worksheet, headers: List[str], start_row: int = 1) -> None:
+        """
+        Write headers with professional styling.
+        
+        File: file_handler.py
+        Function: _write_frequency_headers_with_styling()
+        """
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=start_row, column=col, value=header)
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = Border(
+                left=Side(style="thin"),
+                right=Side(style="thin"), 
+                top=Side(style="thin"),
+                bottom=Side(style="thin")
+            )
+
+    def _write_frequency_row(self, ws: Worksheet, row_idx: int, freq_data: Dict) -> None:
+        """
+        Write a single frequency data row.
+        
+        File: file_handler.py
+        Function: _write_frequency_row()
+        """
+        ws.cell(row=row_idx, column=1, value=freq_data['cluster_address'])
+        ws.cell(row=row_idx, column=2, value=freq_data['cluster_name'])
+        ws.cell(row=row_idx, column=3, value=freq_data['frequency'])
+        ws.cell(row=row_idx, column=4, value=freq_data['crypto_types'])
+        ws.cell(row=row_idx, column=5, value=freq_data['files'])
+        ws.cell(row=row_idx, column=6, value=freq_data['sheets'])
+
+    def _apply_frequency_color_coding(self, ws: Worksheet, sorted_data: List[Dict], start_row: int = 2) -> None:
+        """
+        Apply color coding to frequency analysis sheet based on frequency ranges.
+        
+        File: file_handler.py
+        Function: _apply_frequency_color_coding()
+        
+        Color Scheme:
+        - Red: 10+ occurrences (very high frequency)
+        - Orange: 5-9 occurrences (high frequency)  
+        - Yellow: 3-4 occurrences (medium frequency)
+        - Light Green: 2 occurrences (low frequency)
+        - White: 1 occurrence (single occurrence)
+        """
+        self.logger.info("Applying frequency-based color coding")
+        
+        # Define color fills
+        colors = {
+            'very_high': PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid"),  # Red
+            'high': PatternFill(start_color="FFA500", end_color="FFA500", fill_type="solid"),       # Orange  
+            'medium': PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid"),     # Yellow
+            'low': PatternFill(start_color="90EE90", end_color="90EE90", fill_type="solid"),        # Light Green
+            'single': PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")      # White
+        }
+        
+        # Apply colors based on frequency
+        for idx, freq_data in enumerate(sorted_data):
+            row_idx = start_row + idx
+            frequency = freq_data['frequency']
+            
+            # Determine color based on frequency
+            if frequency >= 10:
+                fill_color = colors['very_high']
+            elif frequency >= 5:
+                fill_color = colors['high']
+            elif frequency >= 3:
+                fill_color = colors['medium']
+            elif frequency == 2:
+                fill_color = colors['low']
+            else:  # frequency == 1
+                fill_color = colors['single']
+            
+            # Apply color to all cells in the row
+            for col in range(1, 7):  # 6 columns
+                ws.cell(row=row_idx, column=col).fill = fill_color
+
+    def _auto_fit_frequency_columns(self, ws: Worksheet) -> None:
+        """
+        Auto-fit columns for optimal display.
+        
+        File: file_handler.py
+        Function: _auto_fit_frequency_columns()
+        """
+        # Set specific column widths for frequency analysis
+        column_widths = {
+            'A': 50,  # Cluster Address
+            'B': 30,  # Cluster Name
+            'C': 15,  # Frequency Count
+            'D': 20,  # Cryptocurrency Type
+            'E': 40,  # Files Containing Address
+            'F': 30   # Sheets Containing Address
+        }
+        
+        for column, width in column_widths.items():
+            ws.column_dimensions[column].width = width
+
+    def _add_frequency_statistics(self, ws: Worksheet, frequency_data: List[Dict], 
+                                total_addresses: int) -> None:
+        """
+        Add statistical summary to the frequency analysis sheet.
+        
+        File: file_handler.py
+        Function: _add_frequency_statistics()
+        
+        This adds summary statistics above the main data table.
+        """
+        # Calculate statistics
+        if not frequency_data:
+            # Handle empty data case
+            ws.cell(row=1, column=1, value="ADDRESS FREQUENCY ANALYSIS SUMMARY").font = Font(bold=True, size=14)
+            ws.cell(row=2, column=1, value=f"Total Addresses Analyzed: {total_addresses}")
+            ws.cell(row=2, column=3, value="Unique Cluster Addresses: 0")
+            ws.cell(row=3, column=1, value="No frequency data available")
+            return
+        
+        frequencies = [data['frequency'] for data in frequency_data]
+        total_unique_clusters = len(frequency_data)
+        avg_frequency = sum(frequencies) / len(frequencies) if frequencies else 0
+        max_frequency = max(frequencies) if frequencies else 0
+        
+        # Find the most frequent cluster
+        most_frequent = max(frequency_data, key=lambda x: x['frequency']) if frequency_data else None
+        
+        # Write statistics
+        ws.cell(row=1, column=1, value="ADDRESS FREQUENCY ANALYSIS SUMMARY").font = Font(bold=True, size=14)
+        ws.cell(row=2, column=1, value=f"Total Addresses Analyzed: {total_addresses}")
+        ws.cell(row=2, column=3, value=f"Unique Cluster Addresses: {total_unique_clusters}")
+        ws.cell(row=3, column=1, value=f"Average Frequency: {avg_frequency:.1f}")
+        ws.cell(row=3, column=3, value=f"Maximum Frequency: {max_frequency}")
+        
+        if most_frequent:
+            ws.cell(row=4, column=1, value=f"Most Frequent Cluster: {most_frequent['cluster_name']} ({most_frequent['frequency']} occurrences)")
+        
+        # Style the statistics section
+        for row in range(1, 5):
+            for col in range(1, 7):
+                cell = ws.cell(row=row, column=col)
+                if cell.value:  # Only style cells with content
+                    cell.font = Font(bold=True)
+                    cell.fill = PatternFill(start_color="F0F0F0", end_color="F0F0F0", fill_type="solid")

@@ -1,9 +1,0 @@
-Transaction Date,Source,Destination Address,Amount,Currency,Notes
-2025-01-18,Internal,3FKWSyWgZgBNeEATqZbWZpZgYHjdRDt9aD,1.5,BTC,Known exchange address - likely to show exposure
-2025-01-18,Customer,bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh,0.75,BTC,Modern Bitcoin address format
-2025-01-18,Exchange,1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s,2.3,BTC,Another known service address
-2025-01-18,Trading,3Cbq7aT1tY8kMxWLbitaG7yT6bPbKChq64,0.45,BTC,P2SH address format
-2025-01-18,Deposit,0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8,150.5,ETH,Known Ethereum exchange address
-2025-01-18,Withdrawal,0xdAC17F958D2ee523a2206206994597C13D831ec7,10000,USDT,Tether address
-2025-01-18,DeFi,0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,5000,USDC,USDC contract
-2025-01-18,Test,TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9,1000,USDT,Tron USDT address
