@@ -61,11 +61,22 @@ class CryptoExtractor:
     with multiple sheets.
     """
     
-    def __init__(self):
-        """Initialize the extractor with patterns and validators."""
+    def __init__(self, file_handler=None):
+        """
+        Initialize the extractor with patterns and validators.
+        
+        File: extractor.py
+        Function: __init__()
+        
+        Args:
+            file_handler: Optional FileHandler instance for enhanced tracking
+        """
         self.logger = logging.getLogger(__name__)
         self.patterns = CryptoPatterns.get_all_patterns()
         self.validator_factory = ValidatorFactory()
+        
+        # Store file handler for enhanced tracking
+        self.file_handler = file_handler
         
         self.logger.info(f"Initialized CryptoExtractor with {len(self.patterns)} cryptocurrency patterns")
     
@@ -127,7 +138,11 @@ class CryptoExtractor:
         all_addresses = []
         total_files = len(file_paths)
         
-        self.logger.info(f"Starting extraction from {total_files} files")
+        self.logger.info(f"Starting extraction from {total_files} files with enhanced tracking")
+            
+        # Pass selected files count to file_handler for tracking
+        if self.file_handler and hasattr(self.file_handler, 'file_processing_stats'):
+            self.file_handler.file_processing_stats['total_files_selected'] = total_files
         
         for idx, file_path in enumerate(file_paths):
             try:
@@ -145,7 +160,15 @@ class CryptoExtractor:
                     else:
                         addresses = self._extract_from_csv_file(file_path, validate_checksum)
                     
+                    # Record empty file if no addresses found
+                    if self.file_handler and len(addresses) == 0:
+                        self.file_handler.record_empty_file(file_path, len(addresses))
+                    
                     all_addresses.extend(addresses)
+                    if self.file_handler and len(addresses) == 0:
+                    # Record empty file if no addresses found
+                        if self.file_handler and len(addresses) == 0:
+                            self.file_handler.record_empty_file(file_path, len(addresses))
                     
                     self.logger.info(
                         f"Extracted {len(addresses)} addresses from {os.path.basename(file_path)}"
@@ -156,7 +179,7 @@ class CryptoExtractor:
                     f"Failed to process {file_path}: {str(e)}",
                     exc_info=True
                 )
-                # Continue with other files
+                # Continue with other files - error already tracked by file_handler
         
         # Mark duplicates
         self._mark_duplicates(all_addresses)
@@ -174,7 +197,12 @@ class CryptoExtractor:
         validate_checksum: bool
     ) -> List[ExtractedAddress]:
         """
-        Extract addresses from an Excel file, processing all sheets.
+        Extract addresses from an Excel file using enhanced tracking.
+        
+        File: extractor.py
+        Function: _extract_from_excel_file()
+        
+        Enhanced to use file_handler's tracking methods for comprehensive error handling.
         
         Args:
             file_path (str): Path to the Excel file
@@ -187,19 +215,23 @@ class CryptoExtractor:
         filename = os.path.basename(file_path)
         
         try:
-            # Read Excel file and get all sheet names
-            excel_file = pd.ExcelFile(file_path)
-            sheet_names = excel_file.sheet_names
+            # Use file_handler's enhanced tracking method if available
+            if self.file_handler and hasattr(self.file_handler, 'read_excel_with_tracking'):
+                sheets_data = self.file_handler.read_excel_with_tracking(file_path)
+            else:
+                # Fallback to basic method
+                self.logger.warning("Using fallback Excel reading method - tracking not available")
+                excel_file = pd.ExcelFile(file_path)
+                sheets_data = {}
+                for sheet_name in excel_file.sheet_names:
+                    sheets_data[sheet_name] = pd.read_excel(file_path, sheet_name=sheet_name, header=None)
+                excel_file.close()
             
-            self.logger.info(f"Processing Excel file with {len(sheet_names)} sheets: {sheet_names}")
-            
-            for sheet_name in sheet_names:
+            # Process each sheet
+            for sheet_name, df in sheets_data.items():
                 self.logger.info(f"Processing sheet: {sheet_name}")
                 
                 try:
-                    # Read the sheet
-                    df = pd.read_excel(file_path, sheet_name=sheet_name, header=None)
-                    
                     # Convert DataFrame to list of lists for processing
                     sheet_data = df.fillna('').astype(str).values.tolist()
                     
@@ -222,22 +254,30 @@ class CryptoExtractor:
                 except Exception as e:
                     self.logger.error(f"Error processing sheet '{sheet_name}' in {file_path}: {str(e)}")
                     continue
-            
-            excel_file.close()
-            
+        
         except Exception as e:
-            self.logger.error(f"Error reading Excel file {file_path}: {str(e)}")
+            # Error already logged and tracked by file_handler's read_excel_with_tracking
+            self.logger.error(f"Error processing Excel file {file_path}: {str(e)}")
             raise
         
         return addresses
-    
+
+
+
+
+
     def _extract_from_csv_file(
         self,
         file_path: str,
         validate_checksum: bool
     ) -> List[ExtractedAddress]:
         """
-        Extract addresses from a single CSV file.
+        Extract addresses from a single CSV file using enhanced tracking.
+        
+        File: extractor.py
+        Function: _extract_from_csv_file()
+        
+        Enhanced to use file_handler's tracking methods for comprehensive error handling.
         
         Args:
             file_path (str): Path to the CSV file
@@ -250,46 +290,50 @@ class CryptoExtractor:
         filename = os.path.basename(file_path)
         
         try:
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as file:
-                # Try to detect delimiter
-                sample = file.read(1024)
-                file.seek(0)
-                
-                sniffer = csv.Sniffer()
-                try:
-                    delimiter = sniffer.sniff(sample).delimiter
-                except:
-                    delimiter = ','  # Default to comma
-                
-                reader = csv.reader(file, delimiter=delimiter)
-                
-                for row_num, row in enumerate(reader, start=1):
-                    # Skip empty rows
-                    if not any(row):
-                        continue
-                    
-                    for col_num, cell in enumerate(row, start=1):
-                        if not cell:
-                            continue
-                        
+            # Use file_handler's enhanced tracking method if available
+            if self.file_handler and hasattr(self.file_handler, 'read_csv_with_tracking'):
+                df = self.file_handler.read_csv_with_tracking(file_path)
+            else:
+                # Fallback to basic method
+                self.logger.warning("Using fallback CSV reading method - tracking not available")
+                df = pd.read_csv(file_path, encoding='utf-8', low_memory=False)
+            
+            # Convert DataFrame to list of lists for processing
+            csv_data = df.fillna('').astype(str).values.tolist()
+            
+            # Process headers as row 0
+            headers = df.columns.tolist() if not df.empty else []
+            if headers:
+                csv_data.insert(0, headers)
+            
+            # Process each row and column
+            for row_num, row in enumerate(csv_data, start=1):
+                for col_num, cell_value in enumerate(row, start=1):
+                    if cell_value and str(cell_value).strip():
                         # Extract addresses from this cell
                         cell_addresses = self._extract_from_cell(
-                            cell,
+                            str(cell_value),
                             filename,
-                            "",  # No sheet name for CSV
+                            'Sheet1',  # CSV files don't have sheet names
                             row_num,
                             col_num,
                             validate_checksum
                         )
                         
                         addresses.extend(cell_addresses)
-                        
+        
         except Exception as e:
-            self.logger.error(f"Error reading CSV file {file_path}: {str(e)}")
+            # Error already logged and tracked by file_handler's read_csv_with_tracking
+            self.logger.error(f"Error processing CSV file {file_path}: {str(e)}")
             raise
         
         return addresses
-    
+
+
+
+
+
+
     def _extract_from_cell(
         self,
         cell_content: str,

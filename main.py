@@ -87,10 +87,16 @@ class CryptoExtractorGUI(GUITabs, GUIHandlers, GUIStyles):
         except Exception as e:
             self.logger.warning(f"Failed to apply styling: {e}")
         
-        # Initialize components
+        # Initialize components IN CORRECT ORDER
         try:
-            self.extractor = CryptoExtractor()
+            # 1. FIRST - Create file_handler
             self.file_handler = FileHandler()
+            
+            # 2. SECOND - Create extractor with file_handler
+            self.extractor = CryptoExtractor(file_handler=self.file_handler)
+            self.logger.info("Connected extractor to file_handler for enhanced tracking")
+            
+            # 3. THIRD - Initialize other components
             self.selected_files = initial_files or []
             self.custom_cryptos = self.config.get('custom_cryptos', [])
             
@@ -126,7 +132,11 @@ class CryptoExtractorGUI(GUITabs, GUIHandlers, GUIStyles):
             self.logger.info(f"Loaded {len(self.selected_files)} initial files")
         
         self.logger.info("GUI initialization complete")
-    
+
+
+
+
+
     def _enhance_with_chainalysis_api(self, addresses):
         """
         Delegate API enhancement to the API processor.
@@ -188,8 +198,10 @@ def run_cli(args):
         config = Config.DEFAULT_CONFIG.copy()
     
     # Initialize extractor
-    extractor = CryptoExtractor()
+    # ENHANCEMENT: Initialize file_handler and extractor with tracking
     file_handler = FileHandler()
+    extractor = CryptoExtractor(file_handler=file_handler)  # Connect for tracking
+    logger.info("Initialized extractor with enhanced file tracking")
     
     # Add custom cryptocurrencies from config
     custom_cryptos = config.get('custom_cryptos', [])
@@ -236,7 +248,12 @@ def run_cli(args):
             return
         
         # Save results
-        saved_path = file_handler.save_to_excel(results, output_path)
+        saved_path = file_handler.write_to_excel(
+            addresses=results, 
+            output_path=output_path,
+            include_api_data=False,  # CLI mode doesn't use API by default
+            selected_files=args.input  # Enable comprehensive file tracking
+        )
         
         # Print statistics
         stats = extractor.get_statistics(results)

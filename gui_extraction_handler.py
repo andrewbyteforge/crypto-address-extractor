@@ -55,6 +55,12 @@ class ExtractionHandler:
             
             # Combine with output directory
             output_path = os.path.join(self.gui.output_dir_var.get(), output_file)
+
+            # ENHANCEMENT: Initialize extractor with file_handler for tracking
+            # This enables comprehensive file processing tracking
+            if not hasattr(self.gui.extractor, 'file_handler') or self.gui.extractor.file_handler is None:
+                self.gui.extractor.file_handler = self.gui.file_handler
+                self.logger.info("Connected extractor to file_handler for enhanced tracking")
             
             # Add custom cryptocurrencies to the extractor
             if self.gui.custom_cryptos:
@@ -82,17 +88,19 @@ class ExtractionHandler:
                 
                 # Enhance results with API data using the comprehensive tracking system
                 enhanced_results = self.gui._enhance_with_chainalysis_api(results)
-                results = enhanced_results
-                api_was_used = True  # Set flag that API was used
+                if enhanced_results:
+                    results = enhanced_results
+                    api_was_used = True  # Set flag that API was used
+                    self.logger.info("Successfully enhanced addresses with Chainalysis API data")
                 
                 # Collect comprehensive API statistics from the tracker
                 api_stats = None
                 if hasattr(self.gui, 'api_processor') and hasattr(self.gui.api_processor, 'api_tracker'):
                     api_stats = self.gui.api_processor.api_tracker.get_statistics_summary()
                     self.logger.info(f"Collected comprehensive API statistics: {api_stats['total_calls']} total calls, "
-                                   f"{api_stats['successful_calls']} successful, "
-                                   f"{api_stats['failed_calls']} failed, "
-                                   f"Success rate: {api_stats['success_rate']:.1f}%")
+                                f"{api_stats['successful_calls']} successful, "
+                                f"{api_stats['failed_calls']} failed, "
+                                f"Success rate: {api_stats['success_rate']:.1f}%")
                     
                     # Log detailed breakdown by endpoint
                     calls_by_endpoint = api_stats.get('calls_by_endpoint', {})
@@ -101,31 +109,46 @@ class ExtractionHandler:
                             success_count = api_stats.get('success_by_endpoint', {}).get(endpoint, 0)
                             avg_time = api_stats.get('avg_response_times', {}).get(endpoint, 0)
                             self.logger.info(f"  {endpoint.title()}: {count} calls, {success_count} successful, "
-                                           f"avg {avg_time:.2f}s response time")
+                                        f"avg {avg_time:.2f}s response time")
                     
                     # Store API stats for file handler to use in summary sheet
                     self.gui.file_handler._api_stats = api_stats
                     self.logger.info("API statistics stored for Excel summary sheet display")
-                else:
-                    self.logger.warning("API processor or tracker not available - no comprehensive statistics to collect")
-                    # Fallback to basic API stats detection
-                    api_stats = getattr(self.gui.api_processor, 'api_stats', None) if hasattr(self.gui, 'api_processor') else None
+                    
+                elif hasattr(self.gui, 'api_processor') and hasattr(self.gui.api_processor, 'api_stats'):
+                    # Fallback to basic API stats from api_processor
+                    api_stats = self.gui.api_processor.api_stats
+                    self.gui.file_handler._api_stats = api_stats
+                    self.logger.info("Using fallback API statistics from api_processor")
+                    
+                elif api_was_used:
+                    # ENHANCED FALLBACK: Extract API stats from enhanced addresses
+                    self.logger.info("No API processor stats found, extracting from enhanced addresses")
+                    api_stats = self.gui.file_handler._extract_api_stats_from_addresses(results)
                     if api_stats:
                         self.gui.file_handler._api_stats = api_stats
-                        self.logger.info("Using fallback API statistics")
+                        self.logger.info(f"Extracted API stats from addresses: {api_stats['total_calls']} enhanced addresses")
+                    else:
+                        self.logger.warning("Could not extract API statistics from addresses")
+                else:
+                    self.logger.warning("API processor or tracker not available - no comprehensive statistics to collect")
                 
                 self.gui._update_progress(80, 100, "API analysis complete, preparing reports...")
             else:
+                # IMPORTANT: Clear any previous API stats if API was not used
+                if hasattr(self.gui.file_handler, '_api_stats'):
+                    delattr(self.gui.file_handler, '_api_stats')
                 self.gui._update_progress(80, 100, "Extraction complete, preparing reports...")
             
             # Phase 3: Excel Export (80-90%)
             self.gui._update_progress(82, 100, "Creating Excel file with API usage statistics...")
             
             # Enhanced Excel export with comprehensive API data and statistics
-            saved_path = self.gui.file_handler.save_to_excel(
-                results, 
-                output_path,
-                include_api_data=api_was_used  # This triggers API data columns and summary statistics
+            saved_path = self.gui.file_handler.write_to_excel(
+                addresses=results, 
+                output_path=output_path,
+                include_api_data=api_was_used,
+                selected_files=self.gui.selected_files  # NEW: Enable comprehensive file tracking
             )
             
             # Log comprehensive API data availability
@@ -138,8 +161,10 @@ class ExtractionHandler:
                 if hasattr(self.gui.file_handler, '_api_stats') and self.gui.file_handler._api_stats:
                     stats = self.gui.file_handler._api_stats
                     self.logger.info(f"API statistics will be displayed on Summary sheet: "
-                                   f"{stats.get('total_calls', 0)} calls, "
-                                   f"{stats.get('success_rate', 0):.1f}% success rate")
+                                f"{stats.get('total_calls', 0)} calls, "
+                                f"{stats.get('success_rate', 0):.1f}% success rate")
+                else:
+                    self.logger.warning("API was used but no API statistics found for summary sheet")
             
             self.gui._update_progress(88, 100, "Excel file created successfully")
             
@@ -159,6 +184,9 @@ class ExtractionHandler:
         finally:
             self.gui.extract_button.config(state=self.gui.tk.NORMAL)
             self.gui._update_progress(0, 100, "Ready")
+
+
+
 
     def _extraction_progress_callback(self, current, total, message):
         """
@@ -335,87 +363,75 @@ class ExtractionHandler:
 
     def _show_enhanced_success_message(self, saved_path, results, report_paths, api_was_used):
         """
-        Show enhanced extraction complete message with API statistics details.
+        Show enhanced success message with file processing statistics.
         
-        Args:
-            saved_path (str): Path to the saved Excel file
-            results (List[ExtractedAddress]): Extracted addresses
-            report_paths (List[str]): Generated report file paths
-            api_was_used (bool): Whether API analysis was performed
+        File: gui_extraction_handler.py
+        Function: _show_enhanced_success_message()
+        
+        Enhanced to include file processing diagnostics in the success message.
         """
-        message = f"Successfully extracted addresses!\n\nResults saved to:\n{os.path.basename(saved_path)}"
+        # Handle case where saved_path might be None
+        if saved_path is None:
+            saved_path = "Unknown location"
+            self.logger.warning("saved_path is None in success message")
         
-        # Add API analysis summary if used
-        if api_was_used:
-            api_enhanced_count = sum(1 for addr in results 
-                                   if hasattr(addr, 'api_balance') or 
-                                      hasattr(addr, 'api_exposure'))
-            if api_enhanced_count > 0:
-                message += f"\n\n🔍 Chainalysis API Analysis Completed"
-                message += f"\n   • {api_enhanced_count} addresses enhanced with API data"
-                
-                # Add comprehensive API statistics if available
-                if hasattr(self.gui.file_handler, '_api_stats') and self.gui.file_handler._api_stats:
-                    stats = self.gui.file_handler._api_stats
-                    message += f"\n   • {stats.get('total_calls', 0)} total API calls made"
-                    message += f"\n   • {stats.get('success_rate', 0):.1f}% success rate"
-                    
-                    # Show processing time
-                    total_time = stats.get('total_time_seconds', 0)
-                    if total_time > 60:
-                        message += f"\n   • Processing time: {total_time/60:.1f} minutes"
-                    else:
-                        message += f"\n   • Processing time: {total_time:.1f} seconds"
-                    
-                    # Show endpoint breakdown
-                    calls_by_endpoint = stats.get('calls_by_endpoint', {})
-                    active_endpoints = [endpoint for endpoint, count in calls_by_endpoint.items() if count > 0]
-                    if active_endpoints:
-                        message += f"\n   • Endpoints used: {', '.join(active_endpoints)}"
-                
-                message += f"\n\n📊 Check the Excel Summary sheet for detailed API usage statistics!"
-                message += f"\n📋 Enhanced data available in individual crypto sheets and API columns"
+        # Gather statistics
+        total_addresses = len(results) if results else 0
+        unique_addresses = len(set(addr.address for addr in results)) if results else 0
+        files_with_addresses = len(set(addr.filename for addr in results)) if results else 0
         
-        # Add report paths information
-        if report_paths:
-            message += "\n\n📄 Additional Reports Generated:"
-            for path in report_paths:
-                if path:  # Check if path is not None or empty
-                    filename = os.path.basename(path)
-                    if path.endswith('.xml'):
-                        message += f"\n   📊 i2 Investigation: {filename}"
-                    elif path.endswith('.csv') and 'entities' in filename:
-                        message += f"\n   📊 i2 Entities: {filename}"
-                    elif path.endswith('.csv') and 'links' in filename:
-                        message += f"\n   📊 i2 Links: {filename}"
-                    elif path.endswith('.gexf'):
-                        message += f"\n   🔗 Gephi Graph: {filename}"
-                    elif path.endswith('.graphml'):
-                        message += f"\n   🔗 Cytoscape Graph: {filename}"
-                    elif path.endswith('.pdf'):
-                        message += f"\n   📄 PDF Report: {filename}"
-                    elif path.endswith('.docx'):
-                        message += f"\n   📄 Word Report: {filename}"
-                    else:
-                        message += f"\n   📄 {filename}"
+        # File processing statistics
+        file_stats_text = ""
+        if hasattr(self.gui.file_handler, 'file_processing_stats'):
+            stats = self.gui.file_handler.file_processing_stats
+            files_attempted = len(stats.get('files_attempted', []))
+            files_successful = len(stats.get('files_successful', []))
+            files_failed = len(stats.get('files_failed', []))
+            files_empty = len(stats.get('files_empty', []))
             
-            # Add helpful message for i2 users
-            if any(path and path.endswith('.xml') for path in report_paths):
-                message += f"\n\n💡 i2 Import Instructions:"
-                message += f"\n   1. Open i2 Analyst's Notebook"
-                message += f"\n   2. Import → From File → Select the XML file"
-                message += f"\n   3. Or import CSV files separately (entities + links)"
+            file_stats_text = f"""
+    File Processing Summary:
+    • Files selected: {stats.get('total_files_selected', files_attempted)}
+    • Files successfully read: {files_successful}
+    • Files with addresses: {files_with_addresses}
+    • Files with no addresses: {files_empty}
+    • Failed to read: {files_failed}"""
+            
+            if files_failed > 0:
+                failed_files = [f['filename'] for f in stats.get('files_failed', [])]
+                file_stats_text += f"\n• Failed files: {', '.join(failed_files[:3])}"
+                if len(failed_files) > 3:
+                    file_stats_text += f" (and {len(failed_files) - 3} more)"
         
-        # Add final tips
-        message += f"\n\n✨ Tips:"
-        message += f"\n   • Check the Summary sheet for complete extraction statistics"
+        # Build success message - handle None saved_path
+        try:
+            display_path = os.path.basename(saved_path) if saved_path and saved_path != "Unknown location" else saved_path
+        except Exception as e:
+            self.logger.warning(f"Error getting basename of saved_path: {e}")
+            display_path = str(saved_path)
+        
+        success_message = f"""Extraction completed successfully!
+
+    Results:
+    • Total addresses found: {total_addresses:,}
+    • Unique addresses: {unique_addresses:,}
+    • Duplicate addresses: {total_addresses - unique_addresses:,}
+    {file_stats_text}
+
+    Output saved to:
+    {display_path}
+
+    The Summary sheet contains detailed file processing diagnostics and error information."""
+        
         if api_was_used:
-            message += f"\n   • API Usage Statistics section shows detailed call metrics"
-            message += f"\n   • Individual crypto sheets contain enhanced API data"
-        message += f"\n   • All data is ready for analysis and investigation"
+            success_message += "\n\n✓ Addresses enhanced with Chainalysis API data"
         
-        self.logger.info(f"Extraction complete with enhanced API tracking. Results saved to: {saved_path}")
-        messagebox.showinfo("Extraction Complete", message)
+        if report_paths:
+            success_message += f"\n\nAdditional reports generated: {len(report_paths)}"
+        
+        messagebox.showinfo("Extraction Complete", success_message)
+
+
 
     def _show_success_message(self, saved_path, results, report_paths):
         """

@@ -211,7 +211,66 @@ class FileHandler:
         except Exception as e:
             self.logger.error(f"Error in save_to_excel: {str(e)}")
             raise
-    
+
+
+    def _extract_api_stats_from_addresses(self, addresses: List[ExtractedAddress]) -> Dict:
+        """
+        Extract API statistics from enhanced addresses.
+        
+        File: file_handler.py
+        Function: _extract_api_stats_from_addresses()
+        
+        Args:
+            addresses: List of addresses that may have API data
+            
+        Returns:
+            Dict: API statistics summary
+        """
+        if not addresses:
+            return None
+        
+        api_enhanced_count = 0
+        api_data_fields = ['api_entity_name', 'api_direct_exposure', 'api_indirect_exposure', 
+                        'api_total_received', 'api_balance', 'api_risk_level']
+        
+        call_details = {}
+        
+        for addr in addresses:
+            has_api_data = False
+            for field in api_data_fields:
+                if hasattr(addr, field) and getattr(addr, field) is not None:
+                    has_api_data = True
+                    break
+            
+            if has_api_data:
+                api_enhanced_count += 1
+                
+                # Count different types of API data
+                if hasattr(addr, 'api_entity_name') and addr.api_entity_name:
+                    call_details['Entity Lookup'] = call_details.get('Entity Lookup', 0) + 1
+                if hasattr(addr, 'api_direct_exposure') and addr.api_direct_exposure is not None:
+                    call_details['Exchange Exposure'] = call_details.get('Exchange Exposure', 0) + 1
+                if hasattr(addr, 'api_balance') and addr.api_balance is not None:
+                    call_details['Balance Lookup'] = call_details.get('Balance Lookup', 0) + 1
+        
+        if api_enhanced_count == 0:
+            return None
+        
+        total_addresses = len(addresses)
+        success_rate = (api_enhanced_count / total_addresses) * 100
+        
+        return {
+            'total_calls': api_enhanced_count,
+            'successful_calls': api_enhanced_count,
+            'failed_calls': total_addresses - api_enhanced_count,
+            'success_rate': success_rate,
+            'addresses_enhanced': api_enhanced_count,
+            'call_details': call_details
+        }
+
+
+
+
     def write_to_excel(self, addresses: List[ExtractedAddress], output_path: str,
                     include_api_data: bool = False, selected_files: List[str] = None) -> None:
         """
@@ -246,9 +305,13 @@ class FileHandler:
             if 'Sheet' in wb.sheetnames:
                 wb.remove(wb['Sheet'])
             
-            # Create sheets in the desired order:
+            # Create sheets in the desired order:            
             # 1. Summary sheet (position 0) - now with enhanced file tracking
-            self._create_summary_sheet(wb, addresses, getattr(self, "_api_stats", None))
+            api_stats = getattr(self, "_api_stats", None)
+            if not api_stats and include_api_data:
+                # Try to get API stats from addresses if available
+                api_stats = self._extract_api_stats_from_addresses(addresses)
+            self._create_summary_sheet(wb, addresses, api_stats)
             
             # 2. Column Definitions sheet (position 1)
             self._create_column_definitions_sheet(wb, include_api_data)
@@ -275,7 +338,7 @@ class FileHandler:
             # Save workbook
             wb.save(output_path)
             self.logger.info(f"Successfully created Excel file with enhanced error tracking: {output_path}")
-            
+            return output_path
         except PermissionError as e:
             error_msg = f"Permission denied writing to {output_path}. Please close the file if it's open."
             self.logger.error(error_msg)
@@ -478,37 +541,52 @@ class FileHandler:
             file_size = 0
         
         try:
-            # Read CSV with multiple encoding fallbacks
-            encodings = [encoding, 'utf-8', 'latin-1', 'cp1252', 'utf-8-sig']  # Added utf-8-sig for BOM
+            # Enhanced encoding detection with more options
+            encodings = [
+                encoding, 'utf-8', 'utf-8-sig', 'latin-1', 'cp1252', 
+                'iso-8859-1', 'ascii', 'utf-16', 'utf-32'
+            ]
             
             df = None
             successful_encoding = None
+            last_error = None
             
             for enc in encodings:
                 try:
                     self.logger.info(f"TRACKING: Trying encoding: {enc}")
-                    df = pd.read_csv(file_path, encoding=enc, low_memory=False)
-                    successful_encoding = enc
-                    self.logger.info(f"TRACKING: Successfully read CSV with {enc} encoding: {len(df)} rows")
-                    break
-                except UnicodeDecodeError as ude:
-                    self.logger.warning(f"TRACKING: Encoding {enc} failed: {ude}")
-                    continue
+                    # Try different separator options too
+                    separators = [',', ';', '\t', '|']
+                    
+                    for sep in separators:
+                        try:
+                            df = pd.read_csv(file_path, encoding=enc, low_memory=False, sep=sep, on_bad_lines='skip')
+                            if not df.empty and len(df.columns) > 1:  # Valid CSV should have multiple columns
+                                successful_encoding = f"{enc} (separator: '{sep}')"
+                                self.logger.info(f"TRACKING: Successfully read CSV with {enc} encoding and '{sep}' separator: {len(df)} rows")
+                                break
+                        except Exception as inner_e:
+                            last_error = str(inner_e)
+                            continue
+                    
+                    if df is not None and not df.empty:
+                        break
+                        
                 except Exception as e:
-                    self.logger.warning(f"TRACKING: Encoding {enc} failed with: {e}")
+                    last_error = str(e)
+                    self.logger.warning(f"TRACKING: Encoding {enc} failed: {e}")
                     continue
             
-            if df is None:
-                error_msg = f"Could not read CSV with any encoding: {encodings}"
+            if df is None or df.empty:
+                error_msg = f"Could not read CSV with any encoding/separator combination. Last error: {last_error}"
                 self.logger.error(f"TRACKING: {error_msg}")
                 self.file_processing_stats['files_failed'].append({
                     'filename': filename,
-                    'error_type': 'Encoding Error',
+                    'error_type': 'Encoding/Format Error',
                     'error_message': error_msg,
                     'file_size': file_size
                 })
                 self.file_processing_stats['processing_errors'][filename] = {
-                    'error': 'Encoding Error',
+                    'error': 'Encoding/Format Error',
                     'details': error_msg,
                     'encodings_tried': encodings
                 }
@@ -557,6 +635,14 @@ class FileHandler:
             raise Exception(error_msg) from e
 
 
+
+
+
+
+
+
+
+
     def record_empty_file(self, file_path: str, addresses_found: int):
         """
         Record when a file was successfully read but contained no addresses.
@@ -578,15 +664,18 @@ class FileHandler:
             })
             self.logger.info(f"TRACKING: File {filename} processed successfully but contained no addresses")
 
+
+
+
     def _create_summary_sheet(self, wb: Workbook, addresses: List[ExtractedAddress], 
                         api_stats=None) -> None:
         """
-        Create summary sheet with comprehensive file processing diagnostics.
+        Create summary sheet with comprehensive file processing diagnostics AND all original summary data.
         
         File: file_handler.py
         Function: _create_summary_sheet()
         
-        Enhanced to show detailed file processing tracking and error information.
+        Enhanced to show both file processing tracking AND all original summary information.
         """
         try:
             self.logger.info("Creating comprehensive Summary sheet with file processing diagnostics")
@@ -665,7 +754,7 @@ class FileHandler:
                         details = self.file_processing_stats['processing_errors'].get(filename, {}).get('error', 'Unknown error')
                         status_color = "FFCCCB"  # Light red
                     elif filename in [addr.filename for addr in addresses]:
-                        addresses_count = len([addr for addr in addresses if addr.filename == attempt['full_path']])
+                        addresses_count = len([addr for addr in addresses if addr.filename == filename])
                         status = "SUCCESS"
                         details = f"{addresses_count} addresses found"
                         status_color = "C6EFCE"  # Light green
@@ -703,121 +792,14 @@ class FileHandler:
                 
                 current_row += 1
             
-            # Rest of summary (addresses, crypto breakdown, API stats)
-            if addresses:
-                # Address extraction summary
-                ws.cell(row=current_row, column=1, value="ADDRESS EXTRACTION SUMMARY").font = Font(bold=True, size=12, color="FFFFFF")
-                ws.cell(row=current_row, column=1).fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-                ws.merge_cells(f'A{current_row}:D{current_row}')
-                current_row += 1
-                
-                total_addresses = len(addresses)
-                unique_addresses = len(set(addr.address for addr in addresses))
-                
-                ws.cell(row=current_row, column=1, value="Total Addresses Found:").font = Font(bold=True)
-                ws.cell(row=current_row, column=2, value=total_addresses)
-                ws.cell(row=current_row, column=3, value="Unique Addresses:").font = Font(bold=True)
-                ws.cell(row=current_row, column=4, value=unique_addresses)
-                current_row += 1
-                
-                ws.cell(row=current_row, column=1, value="Duplicate Addresses:").font = Font(bold=True)
-                ws.cell(row=current_row, column=2, value=total_addresses - unique_addresses)
-                current_row += 2
-                
-                # Add cryptocurrency breakdown and API stats here...
-                # (Include the rest of your existing summary content)
-            
-            # Format columns
-            ws.column_dimensions['A'].width = 30
-            ws.column_dimensions['B'].width = 25
-            ws.column_dimensions['C'].width = 30
-            ws.column_dimensions['D'].width = 40
-            
-            self.logger.info("✓ Created comprehensive Summary sheet with file diagnostics")
-            
-        except Exception as e:
-            error_msg = f"Failed to create summary sheet: {str(e)}"
-            self.logger.error(error_msg, exc_info=True)
-            raise Exception(error_msg) from e
-
-
-
-    def _create_summary_sheet(self, wb: Workbook, addresses: List[ExtractedAddress], 
-                        api_stats=None) -> None:
-        """
-        Create summary sheet with comprehensive file processing statistics.
-        
-        File: file_handler.py
-        Function: _create_summary_sheet()
-        
-        Production-ready implementation that provides detailed file processing insights
-        by analyzing extraction results and inferring comprehensive statistics.
-        
-        Args:
-            wb (Workbook): The workbook to add the sheet to
-            addresses (List[ExtractedAddress]): List of all addresses
-            api_stats (dict, optional): API usage statistics from tracking
-            
-        Raises:
-            Exception: If summary sheet creation fails
-        """
-        try:
-            self.logger.info("Creating comprehensive Summary sheet with file processing statistics")
-            
-            # Create the summary sheet first (position 0)
-            ws = wb.create_sheet("Summary", 0)
-            
-            # Title section
-            ws['A1'] = "Cryptocurrency Address Extraction Summary"
-            ws['A1'].font = Font(size=16, bold=True, color="FFFFFF")
-            ws['A1'].fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-            ws['A1'].alignment = Alignment(horizontal="center")
-            ws.merge_cells('A1:D1')
-            
-            # Enhanced file processing analysis
-            file_analysis = self._analyze_file_processing(addresses)
-            
-            # Basic extraction statistics
-            current_row = 3
-            ws.cell(row=current_row, column=1, value="Extraction Date:").font = Font(bold=True)
-            ws.cell(row=current_row, column=2, value=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            current_row += 1
-            
-            # Enhanced file processing section
-            ws.cell(row=current_row, column=1, value="FILE PROCESSING SUMMARY").font = Font(bold=True, size=12, color="FFFFFF")
-            ws.cell(row=current_row, column=1).fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-            ws.merge_cells(f'A{current_row}:D{current_row}')
-            current_row += 1
-            
-            # File processing statistics
-            ws.cell(row=current_row, column=1, value="Total Files Processed:").font = Font(bold=True)
-            ws.cell(row=current_row, column=2, value=file_analysis['total_files_processed'])
-            ws.cell(row=current_row, column=3, value="Files with Addresses:").font = Font(bold=True)
-            ws.cell(row=current_row, column=4, value=file_analysis['files_with_addresses'])
-            current_row += 1
-            
-            ws.cell(row=current_row, column=1, value="Excel Files Processed:").font = Font(bold=True)
-            ws.cell(row=current_row, column=2, value=file_analysis['excel_files'])
-            ws.cell(row=current_row, column=3, value="CSV Files Processed:").font = Font(bold=True)
-            ws.cell(row=current_row, column=4, value=file_analysis['csv_files'])
-            current_row += 1
-            
-            ws.cell(row=current_row, column=1, value="Excel Sheets Processed:").font = Font(bold=True)
-            ws.cell(row=current_row, column=2, value=file_analysis['excel_sheets_total'])
-            ws.cell(row=current_row, column=3, value="Empty Files Detected:").font = Font(bold=True)
-            ws.cell(row=current_row, column=4, value=file_analysis['empty_files_estimated'])
-            current_row += 2
-            
-            # Address extraction statistics
+            # ADDRESS EXTRACTION SUMMARY (Always show, even if 0 addresses)
             ws.cell(row=current_row, column=1, value="ADDRESS EXTRACTION SUMMARY").font = Font(bold=True, size=12, color="FFFFFF")
             ws.cell(row=current_row, column=1).fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
             ws.merge_cells(f'A{current_row}:D{current_row}')
             current_row += 1
             
-            # Calculate address statistics
             total_addresses = len(addresses)
-            unique_addresses = len(set(addr.address for addr in addresses))
-            duplicate_addresses = total_addresses - unique_addresses
+            unique_addresses = len(set(addr.address for addr in addresses)) if addresses else 0
             
             ws.cell(row=current_row, column=1, value="Total Addresses Found:").font = Font(bold=True)
             ws.cell(row=current_row, column=2, value=total_addresses)
@@ -826,129 +808,147 @@ class FileHandler:
             current_row += 1
             
             ws.cell(row=current_row, column=1, value="Duplicate Addresses:").font = Font(bold=True)
-            ws.cell(row=current_row, column=2, value=duplicate_addresses)
+            ws.cell(row=current_row, column=2, value=total_addresses - unique_addresses)
+            
+            # Calculate success rate
+            if files_successful > 0:
+                success_rate = (files_with_addresses / files_successful) * 100
+            else:
+                success_rate = 0.0
+            
             ws.cell(row=current_row, column=3, value="Success Rate:").font = Font(bold=True)
-            success_rate = (file_analysis['files_with_addresses'] / file_analysis['total_files_processed'] * 100) if file_analysis['total_files_processed'] > 0 else 0
             ws.cell(row=current_row, column=4, value=f"{success_rate:.1f}%")
             current_row += 2
             
-            # File details breakdown
-            if file_analysis['file_details']:
-                ws.cell(row=current_row, column=1, value="FILE PROCESSING DETAILS").font = Font(bold=True, size=12, color="FFFFFF")
-                ws.cell(row=current_row, column=1).fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")
-                ws.merge_cells(f'A{current_row}:D{current_row}')
-                current_row += 1
-                
-                # Headers for file details
-                ws.cell(row=current_row, column=1, value="Filename").font = Font(bold=True)
-                ws.cell(row=current_row, column=2, value="Type").font = Font(bold=True)
-                ws.cell(row=current_row, column=3, value="Addresses Found").font = Font(bold=True)
-                ws.cell(row=current_row, column=4, value="Status").font = Font(bold=True)
-                current_row += 1
-                
-                # File details
-                for file_detail in sorted(file_analysis['file_details'], key=lambda x: x['addresses_found'], reverse=True):
-                    ws.cell(row=current_row, column=1, value=file_detail['filename'])
-                    ws.cell(row=current_row, column=2, value=file_detail['file_type'])
-                    ws.cell(row=current_row, column=3, value=file_detail['addresses_found'])
-                    
-                    # Status with color coding
-                    status_cell = ws.cell(row=current_row, column=4, value=file_detail['status'])
-                    if file_detail['status'] == "Success":
-                        status_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-                    elif file_detail['status'] == "No Addresses":
-                        status_cell.fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
-                    
-                    current_row += 1
-                
-                current_row += 1
-            
-            # Cryptocurrency breakdown section
-            ws.cell(row=current_row, column=1, value="CRYPTOCURRENCY BREAKDOWN").font = Font(bold=True, size=12, color="FFFFFF")
-            ws.cell(row=current_row, column=1).fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+            # ORIGINAL FILE PROCESSING SUMMARY (for backwards compatibility)
+            ws.cell(row=current_row, column=1, value="FILE PROCESSING SUMMARY").font = Font(bold=True, size=12, color="FFFFFF")
+            ws.cell(row=current_row, column=1).fill = PatternFill(start_color="8B4513", end_color="8B4513", fill_type="solid")
             ws.merge_cells(f'A{current_row}:D{current_row}')
             current_row += 1
             
-            # Count addresses by cryptocurrency
-            crypto_counts = defaultdict(int)
-            for addr in addresses:
-                crypto_counts[addr.crypto_name] += 1
+            # Calculate file statistics
+            excel_files_processed = len([f for f in self.file_processing_stats['files_successful'] if f['file_type'] == 'Excel'])
+            csv_files_processed = len([f for f in self.file_processing_stats['files_successful'] if f['file_type'] == 'CSV'])
+            excel_sheets_processed = sum([f.get('sheets_read', 1) for f in self.file_processing_stats['files_successful'] if f['file_type'] == 'Excel'])
             
-            # Headers for crypto breakdown table
+            ws.cell(row=current_row, column=1, value="Total Files Processed:").font = Font(bold=True)
+            ws.cell(row=current_row, column=2, value=files_successful)
+            ws.cell(row=current_row, column=3, value="Files with Addresses:").font = Font(bold=True)
+            ws.cell(row=current_row, column=4, value=files_with_addresses)
+            current_row += 1
+            
+            ws.cell(row=current_row, column=1, value="Excel Files Processed:").font = Font(bold=True)
+            ws.cell(row=current_row, column=2, value=excel_files_processed)
+            ws.cell(row=current_row, column=3, value="CSV Files Processed:").font = Font(bold=True)
+            ws.cell(row=current_row, column=4, value=csv_files_processed)
+            current_row += 1
+            
+            ws.cell(row=current_row, column=1, value="Excel Sheets Processed:").font = Font(bold=True)
+            ws.cell(row=current_row, column=2, value=excel_sheets_processed)
+            ws.cell(row=current_row, column=3, value="Empty Files Detected:").font = Font(bold=True)
+            ws.cell(row=current_row, column=4, value=files_empty)
+            current_row += 2
+            
+            # CRYPTOCURRENCY BREAKDOWN (Always show, even if 0 addresses)
+            ws.cell(row=current_row, column=1, value="CRYPTOCURRENCY BREAKDOWN").font = Font(bold=True, size=12, color="FFFFFF")
+            ws.cell(row=current_row, column=1).fill = PatternFill(start_color="9966CC", end_color="9966CC", fill_type="solid")
+            ws.merge_cells(f'A{current_row}:D{current_row}')
+            current_row += 1
+            
+            # Headers
             ws.cell(row=current_row, column=1, value="Cryptocurrency").font = Font(bold=True)
             ws.cell(row=current_row, column=2, value="Count").font = Font(bold=True)
             ws.cell(row=current_row, column=3, value="Percentage").font = Font(bold=True)
             ws.cell(row=current_row, column=4, value="Files").font = Font(bold=True)
             current_row += 1
             
-            # Crypto breakdown data with file distribution
-            for crypto, count in sorted(crypto_counts.items(), key=lambda x: x[1], reverse=True):
-                percentage = (count / total_addresses) * 100 if total_addresses > 0 else 0
-                crypto_files = len(set(addr.filename for addr in addresses if addr.crypto_name == crypto))
+            if addresses:
+                # Calculate cryptocurrency statistics
+                crypto_counts = {}
+                crypto_files = {}
+                for addr in addresses:
+                    crypto_counts[addr.crypto_name] = crypto_counts.get(addr.crypto_name, 0) + 1
+                    if addr.crypto_name not in crypto_files:
+                        crypto_files[addr.crypto_name] = set()
+                    crypto_files[addr.crypto_name].add(addr.filename)
                 
-                ws.cell(row=current_row, column=1, value=crypto)
-                ws.cell(row=current_row, column=2, value=count)
-                ws.cell(row=current_row, column=3, value=f"{percentage:.1f}%")
-                ws.cell(row=current_row, column=4, value=crypto_files)
+                for crypto, count in sorted(crypto_counts.items()):
+                    percentage = (count / total_addresses) * 100
+                    file_count = len(crypto_files[crypto])
+                    ws.cell(row=current_row, column=1, value=crypto)
+                    ws.cell(row=current_row, column=2, value=count)
+                    ws.cell(row=current_row, column=3, value=f"{percentage:.1f}%")
+                    ws.cell(row=current_row, column=4, value=file_count)
+                    current_row += 1
+            else:
+                # No addresses found
+                ws.cell(row=current_row, column=1, value="No cryptocurrency addresses found")
+                ws.merge_cells(f'A{current_row}:D{current_row}')
                 current_row += 1
             
             current_row += 1
             
-            # API Usage Statistics Section (if available)
-            if api_stats and api_stats.get('total_calls', 0) > 0:
-                ws.cell(row=current_row, column=1, value="CHAINALYSIS API USAGE STATISTICS").font = Font(bold=True, size=12, color="FFFFFF")
-                ws.cell(row=current_row, column=1).fill = PatternFill(start_color="E67E22", end_color="E67E22", fill_type="solid")
+            # API Statistics (if available)
+            if api_stats:
+                ws.cell(row=current_row, column=1, value="API ENHANCEMENT STATISTICS").font = Font(bold=True, size=12, color="FFFFFF")
+                ws.cell(row=current_row, column=1).fill = PatternFill(start_color="FF6B35", end_color="FF6B35", fill_type="solid")
                 ws.merge_cells(f'A{current_row}:D{current_row}')
                 current_row += 1
                 
-                # Overall API Statistics
                 ws.cell(row=current_row, column=1, value="Total API Calls:").font = Font(bold=True)
                 ws.cell(row=current_row, column=2, value=api_stats.get('total_calls', 0))
+                ws.cell(row=current_row, column=3, value="Successful Calls:").font = Font(bold=True)
+                ws.cell(row=current_row, column=4, value=api_stats.get('successful_calls', 0))
+                current_row += 1
+                
+                ws.cell(row=current_row, column=1, value="Failed Calls:").font = Font(bold=True)
+                ws.cell(row=current_row, column=2, value=api_stats.get('failed_calls', 0))
                 ws.cell(row=current_row, column=3, value="Success Rate:").font = Font(bold=True)
-                success_rate = api_stats.get('success_rate', 0)
-                ws.cell(row=current_row, column=4, value=f"{success_rate:.1f}%")
+                ws.cell(row=current_row, column=4, value=f"{api_stats.get('success_rate', 0):.1f}%")
                 current_row += 1
                 
-                ws.cell(row=current_row, column=1, value="Successful Calls:").font = Font(bold=True)
-                ws.cell(row=current_row, column=2, value=api_stats.get('successful_calls', 0))
-                ws.cell(row=current_row, column=3, value="Failed Calls:").font = Font(bold=True)
-                ws.cell(row=current_row, column=4, value=api_stats.get('failed_calls', 0))
-                current_row += 1
-                
-                ws.cell(row=current_row, column=1, value="Total Processing Time:").font = Font(bold=True)
-                total_time = api_stats.get('total_time_seconds', 0)
-                time_str = f"{total_time/60:.1f} minutes" if total_time > 60 else f"{total_time:.1f} seconds"
-                ws.cell(row=current_row, column=2, value=time_str)
-                ws.cell(row=current_row, column=3, value="Avg Response Time:").font = Font(bold=True)
-                avg_time = api_stats.get('avg_response_time', 0)
-                ws.cell(row=current_row, column=4, value=f"{avg_time:.2f}s")
-                current_row += 2
-                
-                # API Calls by Endpoint Type
-                calls_by_endpoint = api_stats.get('calls_by_endpoint', {})
-                if any(calls_by_endpoint.values()):
-                    ws.cell(row=current_row, column=1, value="API Endpoint Breakdown:").font = Font(bold=True)
+                # API Call Details
+                if api_stats.get('call_details'):
+                    current_row += 1
+                    ws.cell(row=current_row, column=1, value="API Call Breakdown:").font = Font(bold=True)
                     current_row += 1
                     
-                    for endpoint, count in calls_by_endpoint.items():
-                        if count > 0:
-                            success_count = api_stats.get('success_by_endpoint', {}).get(endpoint, 0)
-                            failure_count = api_stats.get('failure_by_endpoint', {}).get(endpoint, 0)
-                            avg_time = api_stats.get('avg_response_times', {}).get(endpoint, 0)
-                            
-                            ws.cell(row=current_row, column=1, value=f"  {endpoint.title()}:")
-                            ws.cell(row=current_row, column=2, value=f"{count} calls")
-                            ws.cell(row=current_row, column=3, value=f"({success_count} success, {failure_count} failed)")
-                            ws.cell(row=current_row, column=4, value=f"Avg: {avg_time:.2f}s")
-                            current_row += 1
+                    for endpoint, count in api_stats['call_details'].items():
+                        ws.cell(row=current_row, column=2, value=f"{endpoint}:")
+                        ws.cell(row=current_row, column=3, value=count)
+                        current_row += 1
+            
+            # EXTRACTION PERFORMANCE (if addresses found)
+            if addresses:
+                current_row += 1
+                ws.cell(row=current_row, column=1, value="EXTRACTION PERFORMANCE").font = Font(bold=True, size=12, color="FFFFFF")
+                ws.cell(row=current_row, column=1).fill = PatternFill(start_color="20B2AA", end_color="20B2AA", fill_type="solid")
+                ws.merge_cells(f'A{current_row}:D{current_row}')
+                current_row += 1
+                
+                # Top performing files
+                file_performance = {}
+                for addr in addresses:
+                    file_performance[addr.filename] = file_performance.get(addr.filename, 0) + 1
+                
+                if file_performance:
+                    top_files = sorted(file_performance.items(), key=lambda x: x[1], reverse=True)[:5]
+                    
+                    ws.cell(row=current_row, column=1, value="Top Files by Address Count:").font = Font(bold=True)
+                    current_row += 1
+                    
+                    for i, (filename, count) in enumerate(top_files, 1):
+                        ws.cell(row=current_row, column=1, value=f"{i}. {filename}")
+                        ws.cell(row=current_row, column=2, value=f"{count} addresses")
+                        current_row += 1
             
             # Format columns
-            ws.column_dimensions['A'].width = 25
-            ws.column_dimensions['B'].width = 20
-            ws.column_dimensions['C'].width = 25
-            ws.column_dimensions['D'].width = 15
+            ws.column_dimensions['A'].width = 30
+            ws.column_dimensions['B'].width = 25
+            ws.column_dimensions['C'].width = 30
+            ws.column_dimensions['D'].width = 40
             
-            self.logger.info("✓ Created comprehensive Summary sheet successfully")
+            self.logger.info("✓ Created comprehensive Summary sheet with all original sections")
             
         except Exception as e:
             error_msg = f"Failed to create summary sheet: {str(e)}"
